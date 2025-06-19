@@ -11,31 +11,25 @@ build-backend = "setuptools.build_meta"
 [project]
 name        = "neddata"          # < will be replaced by scaffold script
 version     = "0.1.0"
-description = "Short, one-line summary."
-authors     = [{ name = "markur4", email = "you@example.com" }]
+description = "Named Entity Disambiguation Datasets"  # < will be replaced by scaffold script
+authors     = [
+    { name = "markur4", email = "martin.kur4@gmail.com" },
+    { name = "bkroege"}
+    ]
 readme      = "README.md"
-license     = { text = "MIT" }
+# license     = { text = "MIT" }
 requires-python = ">=3.12"
 dependencies = [
     # --- Core packages ------------------
-    "ipykernel",
-    "dotenv",        # < Loads .env files
     "environs",
     # "tqdm",          # < Progress bars
     # --- Numerical ----------------------
     "numpy",
     "openpyxl",      # < Opens excel files
     "pandas",
-    # --- Plotting -----------------------
-    # "matplotlib",
-    # "seaborn",
-    # "plotastic",
-    # "scipy",
-    # --- Machine learning --------------
-    # "scikit-learn",
-    # "tiktoken",
-    # "openai",
-    # "torch",
+    # --- Data I/O ----------------------
+    "requests",      # < HTTP requests
+    "pooch",
 ]
 
 
@@ -46,6 +40,7 @@ dependencies = [
 [project.optional-dependencies]
 ### pip install -e .[dev]
 dev = [
+    "ipykernel",
     # --- Packaging helpers ------------
     # "pip-tools>=7.4",   # < Dependency management: pip-compile
     # --- Testing ----------------------
@@ -71,6 +66,8 @@ dev = [
 # !! Best practice: ONE import package with same name as project!
 [tool.setuptools]
 package-dir = { "" = "src"}
+include-package-data = true   # already the default
+# ?? Anything tracked by git will be included automatically by default.
 
 # > Autodiscovery:
 [tool.setuptools.packages.find]
@@ -79,15 +76,14 @@ where = ["src"]                       # < Scan only src/ for packages
 
 
 # === Include data *inside* the package =======
-[tool.setuptools.package-data]
-"neddata" = [
-    "data/**/*.xlsx",         # src/neddata/data/
-    "images/**/*.{png,jpg}",  # src/neddata/images/
-    ]
+# [tool.setuptools.package-data]
+# "neddata.abbey" = ["**/*.+(csv|xlsx|json|index|npy|txt)"]  # src/neddata/abbey/
+
+
 
 # === Include data *outside* the package (e.g. top-level docs/) ====
 # > Installs into <sys.prefix>/share/neddata
-# !! Requires a MANIFEST.in! 
+# !! Requires a MANIFEST.in!
 # TODO: Find solution to get rid of MANIFEST.in (hatchling..?)
 # [tool.setuptools.data-files]
 # "share/neddata/experiments" = ["experiments/*.ipynb"]
@@ -96,35 +92,9 @@ where = ["src"]                       # < Scan only src/ for packages
 
 
 # =====================================================================
-# === Terminal entry points
-# =====================================================================
-
-# [project.scripts]
-# neddata = "neddata.cli:main" # !! No template yet for cli.py
-
-
-# =====================================================================
 # === Tool configurations
 # =====================================================================
 
-# Black code-formatter defaults
-[tool.black]
-line-length = 80
-target-version = ["py312"]
-exclude = '''
-/(
-    \.venv
-  | \venv
-  | \.direnv
-  | build
-  | dist
-)/
-'''  # TOML uses single quotes for regex; see Black docs
-
-# Ruff (linter) – keep rules in sync with Black
-# [tool.ruff]
-# line-length = 88
-# unsafe-fixes = true
 
 # Pytest: minimal example
 [tool.pytest.ini_options]
