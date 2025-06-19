@@ -8,6 +8,7 @@ from importlib.resources import files, as_file
 from importlib.resources.abc import Traversable
 from pathlib import Path
 import fnmatch
+from difflib import get_close_matches
 
 from typing import (
     Callable,
@@ -56,7 +57,7 @@ type Resource = DataFile | DataDir  # public alias
 class Catalogue(Mapping[str, Resource]):
     """Auto-discovers files & 'directory datasets' beneath *package_root*."""
 
-    FILE_PATTERNS = ("*.csv", "*.xlsx", "*.json", "*.txt")
+    FILE_PATTERNS = ("*.csv", "*.xlsx", "*.json", "*.txt", "*.npy", "*.pickle")
     IGNORE_PATTERNS = (".git", "__pycache__")
 
     def __init__(
@@ -70,8 +71,25 @@ class Catalogue(Mapping[str, Resource]):
             self._build()
 
     # ---------- Mapping API ----------
+    def _suggest(
+        self, bad_key: str, n: int = 1, cutoff: float = 0.6
+    ) -> list[str]:
+        return get_close_matches(
+            bad_key,
+            self._data.keys(),  # possibilities
+            n=n,
+            cutoff=cutoff,  # 0.0 = very lenient, 1.0 = exact
+        )
+
     def __getitem__(self, key: str) -> Resource:
-        return self._data[key]
+        try:
+            return self._data[key.lower()]
+        except KeyError as exc:
+            suggestions = self._suggest(key)
+            hint = ", ".join(suggestions) if suggestions else "no close matches"
+            raise KeyError(
+                f"Resource '{key}' not found; Did you mean: '{hint}'?"
+            ) from exc
 
     def __iter__(self) -> Iterator[str]:
         return iter(self._data)
@@ -123,7 +141,9 @@ class Catalogue(Mapping[str, Resource]):
                 continue
             # > declare directory-dataset once
             if p.is_dir() and self._match_any(p.name, self.dir_patterns):
-                self._data[p.relative_to(self._root).as_posix()] = DataDir(p)
+                key = f"{p.relative_to(self._root).as_posix()}/"
+                key = key.lower()  # < make keys case-insensitive
+                self._data[key] = DataDir(p)
                 continue
             # > skip everything nested inside a directory-dataset
             if self._has_dir_ancestor(p):
@@ -131,15 +151,15 @@ class Catalogue(Mapping[str, Resource]):
             # > ordinary file
             if p.is_file() and self._match_any(p.name, self.FILE_PATTERNS):
                 key = p.relative_to(self._root).with_suffix("").as_posix()
-                loader = lookup(key) or u.fileio.get_default_loader(p)
-                self._data[key] = DataFile(
-                    p, loader=loader
-                )
+                key = key.lower()
+                loader = lookup_registry(key) or u.fileio.get_default_loader(p)
+                self._data[key] = DataFile(p, loader=loader)
 
 
 if __name__ == "__main__":
     from pprint import pprint
 
+    print(_REGISTRY)
     # create a catalogue
     cat = Catalogue("neddata.abbey")
 
@@ -148,7 +168,15 @@ if __name__ == "__main__":
     pprint(cat.keys())
 
     # %%
-    cat["Regests/2_Ben_Cist_Identifizierungen"]
+    cat["Regests/2_Ben-Cist_Identifizierungen"]
+
+    # %%
+    # !! Typo lower case
+    cat["Regests/2_ben-Cist_Identifizierungen"]
+
+    # %%
+    # !! Big
+    cat["Regests/3Cis-ben"]
 
     # %%
     # pretty-print the catalogue
@@ -183,7 +211,7 @@ def register(
     return decorator
 
 
-def lookup(key: str) -> Callable[[Path], Any] | None:
+def lookup_registry(key: str) -> Callable[[Path], Any] | None:
     """Return the first loader whose pattern matches *key* (exact or glob)."""
     for pattern, loader in _REGISTRY.items():
         if fnmatch.fnmatchcase(key, pattern):  # shell-style wildcards
@@ -195,7 +223,8 @@ def lookup(key: str) -> Callable[[Path], Any] | None:
 
 import pandas as pd
 
-@register("Regests/2_Ben_Cist_Identifizierungen")      # exact key
+
+@register("Regests/2_Ben-Cist_Identifizierungen")  # exact key
 def read_ben_cist(path: Path) -> pd.DataFrame:
     """Import CSV file that ignores the separator in the last column."""
     # 1) Read the whole file as plain text, one Python string per line
@@ -215,14 +244,14 @@ def read_ben_cist(path: Path) -> pd.DataFrame:
 
 if __name__ == "__main__":
     from IPython.display import display
-    
-    print(cat["Regests/2_Ben_Cist_Identifizierungen"].path)
-    
+
+    print(cat["Regests/2_Ben-Cist_Identifizierungen"].path)
+
     #  %%
-    df = read_ben_cist(cat["Regests/2_Ben_Cist_Identifizierungen"].path)
+    df = read_ben_cist(cat["Regests/2_Ben-Cist_Identifizierungen"].path)
     display(df)
 
     # %%
     ### Load from the catalogue
     # from neddata import abbey
-    cat["Regests/2_Ben_Cist_Identifizierungen"].load()
+    cat["Regests/2_Ben-Cist_Identifizierungen"].load()
