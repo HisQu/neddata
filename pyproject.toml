@@ -1,0 +1,141 @@
+# =====================================================================
+# === Build backend & settings
+# =====================================================================
+[build-system]
+requires      = ["setuptools>=68", "wheel"]        # or "hatchling", "flit_core", etc.
+build-backend = "setuptools.build_meta"
+
+# =====================================================================
+# === Project metadata (PEP 621)
+# =====================================================================
+[project]
+name        = "neddata"          # < will be replaced by scaffold script
+version     = "0.1.0"
+description = "Short, one-line summary."
+authors     = [{ name = "markur4", email = "you@example.com" }]
+readme      = "README.md"
+license     = { text = "MIT" }
+requires-python = ">=3.12"
+dependencies = [
+    # --- Core packages ------------------
+    "ipykernel",
+    "dotenv",        # < Loads .env files
+    "environs",
+    # "tqdm",          # < Progress bars
+    # --- Numerical ----------------------
+    "numpy",
+    "openpyxl",      # < Opens excel files
+    "pandas",
+    # --- Plotting -----------------------
+    # "matplotlib",
+    # "seaborn",
+    # "plotastic",
+    # "scipy",
+    # --- Machine learning --------------
+    # "scikit-learn",
+    # "tiktoken",
+    # "openai",
+    # "torch",
+]
+
+
+# =====================================================================
+# === Extra Dependencies
+# =====================================================================
+
+[project.optional-dependencies]
+### pip install -e .[dev]
+dev = [
+    # --- Packaging helpers ------------
+    # "pip-tools>=7.4",   # < Dependency management: pip-compile
+    # --- Testing ----------------------
+    "pytest>=8.2",
+    # "pytest-xdist",     # < Multi-core testing
+    # "pytest-cov",       # < Code-Coverage
+    # --- Linting / formatting ---------
+    # "black>=25.1",
+    # "ruff>=0.4",
+    # "mypy>=1.10",
+    # --- Plotting -----------------------
+    "matplotlib",
+    "seaborn",
+    # "plotastic",
+    # "scipy",
+]
+
+# =====================================================================
+# === Packaging
+# =====================================================================
+
+# === Define import paths to packages =======
+# !! Best practice: ONE import package with same name as project!
+[tool.setuptools]
+package-dir = { "" = "src"}
+
+# > Autodiscovery:
+[tool.setuptools.packages.find]
+where = ["src"]                       # < Scan only src/ for packages
+# namespaces = false                     # < Implicit namespace packages ok
+
+
+# === Include data *inside* the package =======
+[tool.setuptools.package-data]
+"neddata" = [
+    "data/**/*.xlsx",         # src/neddata/data/
+    "images/**/*.{png,jpg}",  # src/neddata/images/
+    ]
+
+# === Include data *outside* the package (e.g. top-level docs/) ====
+# > Installs into <sys.prefix>/share/neddata
+# !! Requires a MANIFEST.in! 
+# TODO: Find solution to get rid of MANIFEST.in (hatchling..?)
+# [tool.setuptools.data-files]
+# "share/neddata/experiments" = ["experiments/*.ipynb"]
+# "share/neddata/examples" = ["examples/*.ipynb"]
+# "share/neddata/config"   = ["config/*.ini"]
+
+
+# =====================================================================
+# === Terminal entry points
+# =====================================================================
+
+# [project.scripts]
+# neddata = "neddata.cli:main" # !! No template yet for cli.py
+
+
+# =====================================================================
+# === Tool configurations
+# =====================================================================
+
+# Black code-formatter defaults
+[tool.black]
+line-length = 80
+target-version = ["py312"]
+exclude = '''
+/(
+    \.venv
+  | \venv
+  | \.direnv
+  | build
+  | dist
+)/
+'''  # TOML uses single quotes for regex; see Black docs
+
+# Ruff (linter) – keep rules in sync with Black
+# [tool.ruff]
+# line-length = 88
+# unsafe-fixes = true
+
+# Pytest: minimal example
+[tool.pytest.ini_options]
+# addopts = "-ra -q"   # < run tests quietly, show only errors and warnings
+testpaths = ["tests"]
+
+
+# Just – optional, but makes 'just --list' self-documenting
+[tool.just]
+shell = "bash"
+
+# ===========================
+# End of file
+# ===========================

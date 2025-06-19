@@ -1,0 +1,108 @@
+# =====================================================================
+# === Build backend & settings
+# =====================================================================
+[build-system]
+requires      = ["setuptools>=68", "wheel"]        # or "hatchling", "flit_core", etc.
+build-backend = "setuptools.build_meta"
+
+# =====================================================================
+# === Project metadata (PEP 621)
+# =====================================================================
+[project]
+name        = "NEDData"          # < will be replaced by scaffold script
+version     = "0.1.0"
+description = "Named Entity Disambiguation Datasets"  # < will be replaced by scaffold script
+authors     = [
+    { name = "markur4", email = "martin.kur4@gmail.com" },
+    { name = "bkroege"}
+    ]
+readme      = "README.md"
+# license     = { text = "MIT" }
+requires-python = ">=3.12"
+dependencies = [
+    # --- Core packages ------------------
+    # "tqdm",          # < Progress bars
+    # --- Numerical ----------------------
+    "numpy",
+    "openpyxl",      # < Opens excel files
+    "pandas",
+    # --- Data I/O ----------------------
+    "requests",      # < HTTP requests
+    "pooch",
+]
+
+
+# =====================================================================
+# === Extra Dependencies
+# =====================================================================
+
+[project.optional-dependencies]
+### pip install -e .[dev]
+dev = [
+    "ipykernel",
+    # --- Packaging helpers ------------
+    # "pip-tools>=7.4",   # < Dependency management: pip-compile
+    # --- Testing ----------------------
+    "pytest>=8.2",
+    # "pytest-xdist",     # < Multi-core testing
+    # "pytest-cov",       # < Code-Coverage
+    # --- Linting / formatting ---------
+    # "black>=25.1",
+    # "ruff>=0.4",
+    # "mypy>=1.10",
+    # --- Plotting -----------------------
+    "matplotlib",
+    "seaborn",
+    # "plotastic",
+    # "scipy",
+]
+
+# =====================================================================
+# === Packaging
+# =====================================================================
+
+# === Define import paths to packages =======
+# !! Best practice: ONE import package with same name as project!
+[tool.setuptools]
+package-dir = { "" = "src"}
+
+# > Autodiscovery:
+[tool.setuptools.packages.find]
+where = ["src"]                       # < Scan only src/ for packages
+# namespaces = false                     # < Implicit namespace packages ok
+
+
+# === Include data *inside* the package =======
+[tool.setuptools.package-data]
+"haiu" = [
+    "example_data/**/*.xlsx",         # src/haiu/data/
+    ]
+
+# === Include data *outside* the package (e.g. top-level docs/) ====
+# > Installs into <sys.prefix>/share/haiu
+# !! Requires a MANIFEST.in! 
+# TODO: Find solution to get rid of MANIFEST.in (hatchling..?)
+# [tool.setuptools.data-files]
+# "share/haiu/experiments" = ["experiments/*.ipynb"]
+# "share/haiu/examples" = ["examples/*.ipynb"]
+# "share/haiu/config"   = ["config/*.ini"]
+
+
+# =====================================================================
+# === Tool configurations
+# =====================================================================
+
+
+# Pytest: minimal example
+[tool.pytest.ini_options]
+# addopts = "-ra -q"   # < run tests quietly, show only errors and warnings
+testpaths = ["tests"]
+
+
+# Just – optional, but makes 'just --list' self-documenting
+[tool.just]
+shell = "bash"
+
+# ===========================
+# End of file
+# ===========================
