@@ -76,8 +76,9 @@ where = ["src"]                       # < Scan only src/ for packages
 
 
 # === Include data *inside* the package =======
-# [tool.setuptools.package-data]
+[tool.setuptools.package-data]
 # "neddata.abbey" = ["**/*.+(csv|xlsx|json|index|npy|txt)"]  # src/neddata/abbey/
+"neddata.abbey" = ["**/*"]  # src/neddata/abbey/
 
 
 
