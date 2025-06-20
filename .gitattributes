@@ -1,0 +1,16 @@
+# > A minus in front of a flag REMOVES that option
+# -diff: Disables textual diffs, and treats it as a whole
+# merge=union: Concatenates changes from different branches, bad for jsons
+# -merge: Keeps ours, flags conflict; user must resolve.
+# -text: Turns off EOL conversions (CRLF to LF)
+# binary: Macro that sets `-text -diff -merge` in one go
+
+
+### Human-readable tabular/text that you don't want Git to diff
+*.csv    -diff           
+*.json   -diff
+### Treat real binaries as such
+*.xlsx   binary
+*.npy    binary
+*.pickle binary
+*.index  binary
