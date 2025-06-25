@@ -21,7 +21,7 @@ debugpy==1.8.14
 decorator==5.2.1
     # via ipython
 environs==14.2.0
-    # via NEDData (pyproject.toml)
+    # via neddata (pyproject.toml)
 et-xmlfile==2.0.0
     # via openpyxl
 executing==2.2.0
@@ -33,7 +33,7 @@ idna==3.10
 iniconfig==2.1.0
     # via pytest
 ipykernel==6.29.5
-    # via NEDData (pyproject.toml)
+    # via neddata (pyproject.toml)
 ipython==9.3.0
     # via ipykernel
 ipython-pygments-lexers==1.1.1
@@ -52,7 +52,7 @@ marshmallow==4.0.0
     # via environs
 matplotlib==3.10.3
     # via
-    #   NEDData (pyproject.toml)
+    #   neddata (pyproject.toml)
     #   seaborn
 matplotlib-inline==0.1.7
     # via
@@ -62,13 +62,13 @@ nest-asyncio==1.6.0
     # via ipykernel
 numpy==2.3.0
     # via
-    #   NEDData (pyproject.toml)
     #   contourpy
     #   matplotlib
+    #   neddata (pyproject.toml)
     #   pandas
     #   seaborn
 openpyxl==3.1.5
-    # via NEDData (pyproject.toml)
+    # via neddata (pyproject.toml)
 packaging==25.0
     # via
     #   ipykernel
@@ -77,7 +77,7 @@ packaging==25.0
     #   pytest
 pandas==2.3.0
     # via
-    #   NEDData (pyproject.toml)
+    #   neddata (pyproject.toml)
     #   seaborn
 parso==0.8.4
     # via jedi
@@ -92,7 +92,7 @@ platformdirs==4.3.8
 pluggy==1.6.0
     # via pytest
 pooch==1.8.2
-    # via NEDData (pyproject.toml)
+    # via neddata (pyproject.toml)
 prompt-toolkit==3.0.51
     # via ipython
 psutil==7.0.0
@@ -109,7 +109,7 @@ pygments==2.19.1
 pyparsing==3.2.3
     # via matplotlib
 pytest==8.4.1
-    # via NEDData (pyproject.toml)
+    # via neddata (pyproject.toml)
 python-dateutil==2.9.0.post0
     # via
     #   jupyter-client
@@ -125,10 +125,10 @@ pyzmq==27.0.0
     #   jupyter-client
 requests==2.32.4
     # via
-    #   NEDData (pyproject.toml)
+    #   neddata (pyproject.toml)
     #   pooch
 seaborn==0.13.2
-    # via NEDData (pyproject.toml)
+    # via neddata (pyproject.toml)
 six==1.17.0
     # via python-dateutil
 stack-data==0.6.3

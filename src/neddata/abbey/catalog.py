@@ -26,36 +26,39 @@ DATADIR_PATTERNS = [
 
 
 # %%
-from importlib.resources import files
+if __name__ == "__main__":
+    from importlib.resources import files
 
-package = files(DATASET)
-package
+    package = files(DATASET)
+    package
 
-# %%
-dm.make_pooch_registry(root=package)
+    # %%
+    dm.make_pooch_registry(dir=package)
+
+    # %%
 
 
-# %%
+poochy = dm.make_pooch(DATASET, BASE_URL)
 
-poochy = dm._make_pooch(DATASET, BASE_URL)
-poochy
 
-# %%
-dir(poochy)  # < Show all attributes of the pooch object
+if __name__ == "__main__":
+    poochy
 
-# %%
-poochy.registry  # < List all files in the dataset
+    # %%
+    dir(poochy)  # < Show all attributes of the pooch object
 
-# %%
-poochy.get_url('KDB/KDB_Ben-Cist.csv')
-# %%
+    # %%
+    poochy.registry  # < List all files in the dataset
 
-poochy.is_available('KDB/KDB_Ben-Cist.csv')
+    # %%
+    poochy.get_url("KDB/KDB_Ben-Cist.csv")
+    # %%
 
-# %% 
-poochy.fetch('KDB/KDB_Ben-Cist.csv')
+    poochy.is_available("KDB/KDB_Ben-Cist.csv")
 
-# %%
+    # %%
+    poochy.fetch("KDB/KDB_Ben-Cist.csv")
+
 
 # %%
 # =====================================================================
@@ -67,13 +70,13 @@ poochy.fetch('KDB/KDB_Ben-Cist.csv')
 cat = dm.Catalog(
     DATASET,
     dir_patterns=DATADIR_PATTERNS,
+    pooch=poochy,
 )
 
 if __name__ == "__main__":
     from pprint import pprint
 
-    print(repr(cat))  # > Print the catalogue object
-    pprint(cat.keys())  # > Print the catalogue keys
+    print(cat)  # > Print the catalogue object
 
 
 # %%

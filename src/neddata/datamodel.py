@@ -3,7 +3,7 @@
 # %%
 
 from __future__ import annotations
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from importlib.resources import files, as_file, path
 from importlib.resources.abc import Traversable
 from pathlib import Path
@@ -79,8 +79,8 @@ example tree structure:
 @dataclass(frozen=True, slots=True)
 class DataFile:
     path: Path
+    pooch: pooch.Pooch = field(repr=False, compare=False)
     loader: Callable[[Path], Any] | None = None
-    hash: str | None = None
 
     @property
     def stem(self) -> str:
@@ -91,10 +91,13 @@ class DataFile:
         return self.path.name
 
     def load(self) -> Any:
-        if not self.loader:
+        if self.loader is None:
             raise ValueError(f"No loader for {self.stem}")
+
+        local = Path(self.pooch.fetch(self.path.as_posix()))
+
         try:
-            return self.loader(self.path)
+            return self.loader(local)
         except Exception as e:
             raise ValueError(
                 f"Failed to load '{self.name}' with loader '{self.loader.__name__ if self.loader else 'unknown loader'}'"
@@ -121,9 +124,9 @@ import sys, pooch, pathlib, textwrap
 from pooch import HTTPDownloader
 
 
-def make_pooch_registry(root: Path) -> None:
+def make_pooch_registry(dir: Path) -> None:
 
-    raw_dir = pathlib.Path(root).expanduser()
+    raw_dir = pathlib.Path(dir).expanduser()
     manifest = raw_dir / "pooch_registry.txt"
 
     if not manifest.is_file():  # < Create empty .txt
@@ -142,27 +145,43 @@ def make_pooch_registry(root: Path) -> None:
     )
 
 
-def _make_pooch(dataset: str, base_url: str) -> pooch.Pooch:
+def make_pooch(package: str, base_url: str) -> pooch.Pooch:
     """Create a :class:`pooch.Pooch` for *package* using the shipped registry."""
-
     poochy = pooch.create(
-        path=pooch.os_cache(dataset),
+        path=pooch.os_cache(package),
         base_url=base_url,
         registry=None,  # < will be loaded later
         retry_if_failed=2,
     )
-
-    poochy.load_registry(files(dataset) / "pooch_registry.txt")
+    poochy.load_registry(files(package) / "pooch_registry.txt")
     return poochy
 
-def fetch_github_data(poochy: pooch.Pooch) -> Any:
-    """
-    Fetch a file from a server that requires authentication
-    """
-    username = os.environ.get("SOMESITE_USERNAME")
-    password = os.environ.get("SOMESITE_PASSWORD")
-    download_auth = HTTPDownloader(auth=(username, password))
-    return poochy.fetch("some-data.csv", downloader=download_auth)
+
+# !! The GitHub repo must be public, otherwise pooch needs authentication.
+# def fetch_github_data(poochy: pooch.Pooch) -> Any:
+#     """
+#     Fetch a file from a server that requires authentication
+#     """
+#     username = os.environ.get("SOMESITE_USERNAME")
+#     password = os.environ.get("SOMESITE_PASSWORD")
+#     download_auth = HTTPDownloader(auth=(username, password))
+#     return poochy.fetch("some-data.csv", downloader=download_auth)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _format_key(key: str) -> str:
+    """Normalise keys so look‑ups are case‑insensitive and whitespace tolerant."""
+    return key.lower().strip().replace(" ", "_").replace("-", "_")
+
+
+def _match_any(name: str, globs: Iterable[str]) -> bool:
+    """Return *True* if *name* matches at least one shell‑style glob."""
+    return any(fnmatch.fnmatchcase(name, g) for g in globs)
+
 
 # =====================================================================
 # === Catalogue
@@ -184,17 +203,70 @@ class Catalog(Mapping[str, Resource]):
     )
 
     def __init__(
-        self, package: str, dir_patterns: Sequence[str] = ("*RAGI*",)
+        self,
+        package: str,
+        pooch: pooch.Pooch,
+        dir_patterns: Sequence[str] = ("*RAGI*",),
     ) -> None:
         self.package = package
+        self._pooch = pooch
         self.dir_patterns = dir_patterns
 
-        _root: Traversable = files(package)  # < Traversable ✔
-        with as_file(_root) as r:  # < zip-safe path
-            self._root: Path = r
-            self._data: Dict[str, Resource] = {}
-            self._loaders: Dict[str, Callable[[Path], Any]] = {}
-            self._build()
+        ###
+        self._root = files(package)
+        self._data: Dict[str, Resource] = {}
+        self._loaders: Dict[str, Callable[[Path], Any]] = {}
+
+        ### Build
+        self._build()
+
+    # =================================================================
+    # === Build
+    # =================================================================
+
+    # def _has_dir_ancestor(self, path: Path) -> bool:
+    #     return any(
+    #         _match_any(parent.name, self.dir_patterns)
+    #         for parent in path.parents
+    #     )
+
+    # def _build(self) -> None:
+    #     for p in self._root.rglob("*"):  # walks files+dirs
+    #         key = p.relative_to(self._root).as_posix()
+    #         key = self._format_key(key)
+    #         # > Generic ignore (any part)
+    #         _ignored: bool = any(
+    #             self._match_any(part, self.IGNORE_PATTERNS) for part in p.parts
+    #         )
+    #         if _ignored:
+    #             continue
+    #         elif p.is_dir() and self._match_any(p.name, self.dir_patterns):
+    #             self._data[key + "/"] = DataDir(p)
+    #         elif self._has_dir_ancestor(p):
+    #             continue  # > Skip everything nested inside a DataDir
+    #         elif p.is_file() and self._match_any(p.name, self.FILE_PATTERNS):
+    #             loader = self._lookup_loaders(
+    #                 key
+    #             ) or u.fileio.get_default_loader(p)
+    #             self._data[key] = DataFile(p, loader=loader)
+
+    def _build(self) -> None:
+        """Populate ``self._data`` from *pooch* registry entries."""
+        for p in self._pooch.registry.keys():
+
+            if _match_any(p, self.IGNORE_PATTERNS):
+                continue
+
+            key = _format_key(p)
+            _p = Path(p)
+
+            if _match_any(_p.name, self.dir_patterns):
+                self._data[key + "/"] = DataDir(path=_p)
+            elif _match_any(_p.name, self.FILE_PATTERNS):
+                loader = self._lookup_loaders(
+                    key
+                ) or u.fileio.get_default_loader(_p)
+                self._data[key] = DataFile(_p, self._pooch, loader)
 
     # =================================================================
     # === Public Helpers
@@ -316,7 +388,11 @@ class Catalog(Mapping[str, Resource]):
                 if fnmatch.fnmatchcase(key, pattern):
                     if isinstance(res, DataFile):
                         # > Replace loader immediately
-                        self._data[key] = DataFile(res.path, loader=func)
+                        self._data[key] = DataFile(
+                            res.path,
+                            pooch=self._pooch,
+                            loader=func,
+                        )
                         matched = True
             if not matched:
                 self._raise_key_error(bad_key=key)
@@ -337,57 +413,31 @@ class Catalog(Mapping[str, Resource]):
                 return loader
         return None
 
-    # =================================================================
-    # === Build
-    # =================================================================
-
-    def _match_any(self, name: str, globs: Iterable[str]) -> bool:
-        return any(fnmatch.fnmatchcase(name, g) for g in globs)  # wildcards ✔
-
-    def _has_dir_ancestor(self, path: Path) -> bool:
-        return any(
-            self._match_any(parent.name, self.dir_patterns)
-            for parent in path.parents
-        )
-
-    def _build(self) -> None:
-        for p in self._root.rglob("*"):  # walks files+dirs
-            key = p.relative_to(self._root).as_posix()
-            key = self._format_key(key)
-            # > Generic ignore (any part)
-            _ignored: bool = any(
-                self._match_any(part, self.IGNORE_PATTERNS) for part in p.parts
-            )
-            if _ignored:
-                continue
-            elif p.is_dir() and self._match_any(p.name, self.dir_patterns):
-                self._data[key + "/"] = DataDir(p)
-            elif self._has_dir_ancestor(p):
-                continue  # > Skip everything nested inside a DataDir
-            elif p.is_file() and self._match_any(p.name, self.FILE_PATTERNS):
-                loader = self._lookup_loaders(
-                    key
-                ) or u.fileio.get_default_loader(p)
-                self._data[key] = DataFile(p, loader=loader)
-
 
 if __name__ == "__main__":
     from pprint import pprint
 
     # print(_REGISTRY)
     # create a catalogue
-    cat = Catalog("neddata.abbey")
+    DATASET = "neddata.abbey"  # < Package name of the dataset
+    DB_URL = (
+        "https://raw.githubusercontent.com/HisQu/neddata/refs/heads/main/src"
+    )
+    BASE_URL = f"{DB_URL}/{DATASET.replace('.', '/')}"
+    poochy = make_pooch(DATASET, BASE_URL)
+
+    cat = Catalog("neddata.abbey", pooch=poochy)
 
     # %%
     # print the catalogue keys
     pprint(cat.keys())
 
     # %%
-    cat["Regests/2_Ben-Cist_Identifizierungen"]
+    cat["Regests/2_Ben-Cist_Identifizierungen.csv"]
 
     # %%
     # !! Typo lower case
-    cat["Regests/2_ben-Cist_Identifizierungen"]
+    cat["Regests/2_ben-Cist_Identifizierungen.csv"]
 
     # %%
     # !! Big
