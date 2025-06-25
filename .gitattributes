@@ -7,7 +7,7 @@
 
 
 ### Human-readable tabular/text that you don't want Git to diff
-**/*.csv    binary           
+*.csv    binary           
 *.json   binary
 ### Treat real binaries as such
 *.xlsx   binary

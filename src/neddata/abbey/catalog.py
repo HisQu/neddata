@@ -12,7 +12,9 @@ from neddata import datamodel as dm
 # %%
 
 DATASET = "neddata.abbey" # < Package name of the dataset
-BASE_URL = f"https://github.com/HisQu/neddata/blob/main/src/{DATASET.replace('.', '/')}"
+
+DB_URL = "https://raw.githubusercontent.com/HisQu/neddata/refs/heads/main/src"
+BASE_URL = f"{DB_URL}/{DATASET.replace('.', '/')}"
 
 print(BASE_URL)
 
