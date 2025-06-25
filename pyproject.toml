@@ -66,7 +66,7 @@ dev = [
 # !! Best practice: ONE import package with same name as project!
 [tool.setuptools]
 package-dir = { "" = "src"}
-include-package-data = true   # already the default
+include-package-data = false   #  turn off the implicit “take everything”
 # ?? Anything tracked by git will be included automatically by default.
 
 # > Autodiscovery:
@@ -79,7 +79,9 @@ where = ["src"]                       # < Scan only src/ for packages
 [tool.setuptools.package-data]
 "neddata.abbey" = ["pooch_registry.txt"]  # src/neddata/abbey/pooch_registry.txt
 
-
+# === Exclude data *inside* the package =======
+[tool.setuptools.exclude-package-data]
+"neddata.abbey" = ["*"]               # <- excludes *.csv, *.json, … 
 
 # === Include data *outside* the package (e.g. top-level docs/) ====
 # > Installs into <sys.prefix>/share/neddata
