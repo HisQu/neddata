@@ -80,8 +80,8 @@ where = ["src"]                       # < Scan only src/ for packages
 "neddata.abbey" = ["pooch_registry.txt"]  # src/neddata/abbey/pooch_registry.txt
 
 # === Exclude data *inside* the package =======
-[tool.setuptools.exclude-package-data]
-"neddata.abbey" = ["*"]               # <- excludes *.csv, *.json, … 
+# [tool.setuptools.exclude-package-data]
+# "neddata.abbey" = ["*"]               # <- excludes *.csv, *.json, … 
 
 # === Include data *outside* the package (e.g. top-level docs/) ====
 # > Installs into <sys.prefix>/share/neddata
