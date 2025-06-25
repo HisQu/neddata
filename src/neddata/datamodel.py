@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 from dataclasses import dataclass
-from importlib.resources import files, as_file
+from importlib.resources import files, as_file, path
 from importlib.resources.abc import Traversable
 from pathlib import Path
 import fnmatch
@@ -133,10 +133,12 @@ class Catalog(Mapping[str, Resource]):
     def __init__(
         self, package: str, dir_patterns: Sequence[str] = ("*RAGI*",)
     ) -> None:
-        root_t: Traversable = files(package)  # Traversable ✔
-        with as_file(root_t) as root:  # zip-safe path
-            self.dir_patterns = dir_patterns
-            self._root: Path = root
+        self.package = package
+        self.dir_patterns = dir_patterns
+
+        _root: Traversable = files(package)  # < Traversable ✔
+        with as_file(_root) as r:  # < zip-safe path
+            self._root: Path = r
             self._data: Dict[str, Resource] = {}
             self._registry: Dict[str, Callable[[Path], Any]] = {}
             self._build()
@@ -175,10 +177,10 @@ class Catalog(Mapping[str, Resource]):
 
     def __repr__(self) -> str:
         return (
-            f"<{self.__class__.__name__}\n"
-            f"  len={len(self)}\n"
+            f"<{self.__class__.__name__}(package='{self.package}', dir_patterns={self.dir_patterns})>\n"
             f"  root='{self._root}'\n"
-            f"  dir_patterns={self.dir_patterns}>"
+            f"  len={len(self)}\n"
+            f"  keys=\n   - {"\n   - ".join(self.keys())}\n"
         )
 
     def __str__(self) -> str:
@@ -294,34 +296,26 @@ class Catalog(Mapping[str, Resource]):
             self._match_any(parent.name, self.dir_patterns)
             for parent in path.parents
         )
-    
-    def _set_datadir(self, path: Path) -> None:
-        key = f"{path.relative_to(self._root).as_posix()}/"
-        key = self._format_key(key)
-        self._data[key] = DataDir(path)
-        
-    def _set_datafile(self, path: Path) -> None:
-        key = path.relative_to(self._root).as_posix()
-        key = self._format_key(key)
-        loader = self._lookup_registry(key) or u.fileio.get_default_loader(path)
-        self._data[key] = DataFile(path, loader=loader)
 
     def _build(self) -> None:
         for p in self._root.rglob("*"):  # walks files+dirs
+            key = p.relative_to(self._root).as_posix()
+            key = self._format_key(key)
             # > Generic ignore (any part)
-            if any(
+            _ignored: bool = any(
                 self._match_any(part, self.IGNORE_PATTERNS) for part in p.parts
-            ):
+            )
+            if _ignored:
                 continue
-            # > Declare directory-dataset once
             elif p.is_dir() and self._match_any(p.name, self.dir_patterns):
-                self._set_datadir(p)
-            # > Skip everything nested inside a directory-dataset
+                self._data[key + "/"] = DataDir(p)
             elif self._has_dir_ancestor(p):
-                continue
-            # > Ordinary file
+                continue  # > Skip everything nested inside a DataDir
             elif p.is_file() and self._match_any(p.name, self.FILE_PATTERNS):
-                self._set_datafile(p)
+                loader = self._lookup_registry(
+                    key
+                ) or u.fileio.get_default_loader(p)
+                self._data[key] = DataFile(p, loader=loader)
 
 
 if __name__ == "__main__":
