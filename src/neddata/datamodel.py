@@ -140,7 +140,7 @@ class Catalog(Mapping[str, Resource]):
         with as_file(_root) as r:  # < zip-safe path
             self._root: Path = r
             self._data: Dict[str, Resource] = {}
-            self._registry: Dict[str, Callable[[Path], Any]] = {}
+            self._loaders: Dict[str, Callable[[Path], Any]] = {}
             self._build()
 
     # =================================================================
@@ -242,10 +242,10 @@ class Catalog(Mapping[str, Resource]):
         )
 
     # =================================================================
-    # === Register Custom Loaders
+    # === Set Custom Loaders
     # =================================================================
 
-    def register(
+    def set_loader(
         self, pattern: str
     ) -> Callable[[Callable[[Path], Any]], Callable[[Path], Any]]:
         """
@@ -268,18 +268,18 @@ class Catalog(Mapping[str, Resource]):
             if not matched:
                 self._raise_key_error(bad_key=key)
 
-            self._registry[pattern] = (
+            self._loaders[pattern] = (
                 func  # keep for lookup() if you still need it
             )
             return func
 
         return decorator
 
-    def _lookup_registry(self, key: str) -> Callable[[Path], Any] | None:
+    def _lookup_loaders(self, key: str) -> Callable[[Path], Any] | None:
         """Return the first loader whose pattern matches *key* (exact or
         glob)."""
         key = self._format_key(key)
-        for pattern, loader in self._registry.items():
+        for pattern, loader in self._loaders.items():
             if fnmatch.fnmatchcase(key, pattern):  # shell-style wildcards
                 return loader
         return None
@@ -312,7 +312,7 @@ class Catalog(Mapping[str, Resource]):
             elif self._has_dir_ancestor(p):
                 continue  # > Skip everything nested inside a DataDir
             elif p.is_file() and self._match_any(p.name, self.FILE_PATTERNS):
-                loader = self._lookup_registry(
+                loader = self._lookup_loaders(
                     key
                 ) or u.fileio.get_default_loader(p)
                 self._data[key] = DataFile(p, loader=loader)

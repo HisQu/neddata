@@ -38,8 +38,8 @@ if __name__ == "__main__":
 # => Use globs/wildcards to register a function to multiple files at once!
 
 
-@cat.register("Regests/2_ben-Cist Identifizierungen.csv")
-def read_ben_cist_ident(path: Path) -> pd.DataFrame:
+@cat.set_loader("Regests/2_ben-Cist Identifizierungen.csv")
+def load_ben_cist_data(path: Path) -> pd.DataFrame:
     """Import CSV file that ignores the separator in the last column."""
     ### Read the whole file as plain text, one Python string per line
     with open(path, "r", encoding="utf-8") as f:
@@ -56,7 +56,7 @@ def read_ben_cist_ident(path: Path) -> pd.DataFrame:
 if __name__ == "__main__":
     from IPython.display import display
 
-    pprint(cat._registry)
+    pprint(cat._loaders)
     # print(cat)
     # %%
     _key = "Regests/2_Ben-cist_Identifizierungen.csv"
@@ -67,7 +67,7 @@ if __name__ == "__main__":
     ### Load conventionally
     p = cat[_key].path
     print(p)
-    df = read_ben_cist_ident(p)
+    df = load_ben_cist_data(p)
     display(df)
     # %%
     ### Load from the catalogue
