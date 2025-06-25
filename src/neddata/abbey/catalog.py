@@ -28,31 +28,28 @@ DATADIR_PATTERNS = [
 # %%
 if __name__ == "__main__":
     from importlib.resources import files
-
     package = files(DATASET)
     package
-
     # %%
     dm.make_pooch_registry(dir=package)
-
     # %%
 
 
-poochy = dm.make_pooch(DATASET, BASE_URL)
+POOCHY = dm.make_pooch(DATASET, BASE_URL)
 
 
 if __name__ == "__main__":
-    poochy
+    POOCHY
     # %%
-    dir(poochy)  # < Show all attributes of the pooch object
+    dir(POOCHY)  # < Show all attributes of the pooch object
     # %%
-    poochy.registry  # < List all files in the dataset
+    POOCHY.registry  # < List all files in the dataset
     # %%
-    poochy.get_url("KDB/KDB_Ben-Cist.csv")
+    POOCHY.get_url("KDB/KDB_Ben-Cist.csv")
     # %%
-    poochy.is_available("KDB/KDB_Ben-Cist.csv")
+    POOCHY.is_available("KDB/KDB_Ben-Cist.csv")
     # %%
-    poochy.fetch("KDB/KDB_Ben-Cist.csv")
+    POOCHY.fetch("KDB/KDB_Ben-Cist.csv")
 
 
 # %%
@@ -65,7 +62,7 @@ if __name__ == "__main__":
 cat = dm.Catalog(
     DATASET,
     dir_patterns=DATADIR_PATTERNS,
-    pooch=poochy,
+    pooch=POOCHY,
 )
 
 if __name__ == "__main__":
