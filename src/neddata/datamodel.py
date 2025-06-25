@@ -80,6 +80,7 @@ example tree structure:
 class DataFile:
     path: Path
     loader: Callable[[Path], Any] | None = None
+    hash: str | None = None
 
     @property
     def stem(self) -> str:
@@ -110,6 +111,58 @@ class DataDir:
 
 type Resource = DataFile | DataDir
 
+
+# =====================================================================
+# === Pooch Registry
+# =====================================================================
+
+import os
+import sys, pooch, pathlib, textwrap
+from pooch import HTTPDownloader
+
+
+def make_pooch_registry(root: Path) -> None:
+
+    raw_dir = pathlib.Path(root).expanduser()
+    manifest = raw_dir / "pooch_registry.txt"
+
+    if not manifest.is_file():  # < Create empty .txt
+        manifest.touch()
+
+    pooch.make_registry(raw_dir, manifest)
+
+    print(
+        textwrap.dedent(
+            f"""
+    Manifest written to {manifest.relative_to(pathlib.Path.cwd())}
+    Contains {sum(1 for _ in manifest.open())} entries.
+    You can now upload {raw_dir} to your object store and commit the manifest.
+    """
+        )
+    )
+
+
+def _make_pooch(dataset: str, base_url: str) -> pooch.Pooch:
+    """Create a :class:`pooch.Pooch` for *package* using the shipped registry."""
+
+    poochy = pooch.create(
+        path=pooch.os_cache(dataset),
+        base_url=base_url,
+        registry=None,  # < will be loaded later
+        retry_if_failed=2,
+    )
+
+    poochy.load_registry(files(dataset) / "pooch_registry.txt")
+    return poochy
+
+def fetch_github_data(poochy: pooch.Pooch) -> Any:
+    """
+    Fetch a file from a server that requires authentication
+    """
+    username = os.environ.get("SOMESITE_USERNAME")
+    password = os.environ.get("SOMESITE_PASSWORD")
+    download_auth = HTTPDownloader(auth=(username, password))
+    return poochy.fetch("some-data.csv", downloader=download_auth)
 
 # =====================================================================
 # === Catalogue

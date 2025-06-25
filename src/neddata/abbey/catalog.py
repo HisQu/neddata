@@ -6,21 +6,64 @@ from pathlib import Path
 import pandas as pd
 
 ### Local Imports
-from neddata.datamodel import Catalog
+from neddata import datamodel as dm
+
 
 # %%
-# =====================================================================
-# === Init Catalogue
-# =====================================================================
+
+DATASET = "neddata.abbey" # < Package name of the dataset
+BASE_URL = f"https://github.com/HisQu/neddata/blob/main/src/{DATASET.replace('.', '/')}"
+
+print(BASE_URL)
+
 
 # > Patterns to define what directory is a DataDir and not a normal folder
 DATADIR_PATTERNS = [
     "*RAGI*",  # < RAG Index
 ]
 
+
+# %%
+from importlib.resources import files
+
+package = files(DATASET)
+package
+
+# %%
+dm.make_pooch_registry(root=package)
+
+
+# %%
+
+poochy = dm._make_pooch(DATASET, BASE_URL)
+poochy
+
+# %%
+dir(poochy)  # < Show all attributes of the pooch object
+
+# %%
+poochy.registry  # < List all files in the dataset
+
+# %%
+poochy.get_url('KDB/KDB_Ben-Cist.csv')
+# %%
+
+poochy.is_available('KDB/KDB_Ben-Cist.csv')
+
+# %% 
+poochy.fetch('KDB/KDB_Ben-Cist.csv')
+
+# %%
+
+# %%
+# =====================================================================
+# === Init Catalogue
+# =====================================================================
+
+
 # > <database>.<dataset> is located at ./src/<my_project>/<dataset>
-cat = Catalog(
-    "neddata.abbey",
+cat = dm.Catalog(
+    DATASET,
     dir_patterns=DATADIR_PATTERNS,
 )
 
