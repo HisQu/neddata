@@ -43,19 +43,14 @@ poochy = dm.make_pooch(DATASET, BASE_URL)
 
 if __name__ == "__main__":
     poochy
-
     # %%
     dir(poochy)  # < Show all attributes of the pooch object
-
     # %%
     poochy.registry  # < List all files in the dataset
-
     # %%
     poochy.get_url("KDB/KDB_Ben-Cist.csv")
     # %%
-
     poochy.is_available("KDB/KDB_Ben-Cist.csv")
-
     # %%
     poochy.fetch("KDB/KDB_Ben-Cist.csv")
 
