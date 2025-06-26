@@ -30,6 +30,7 @@ dependencies = [
     # --- Data I/O ----------------------
     "requests",      # < HTTP requests
     "pooch",
+    "fuzzywuzzy",    # < String matching
 ]
 
 

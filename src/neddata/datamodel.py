@@ -3,12 +3,18 @@
 # %%
 
 from __future__ import annotations
+
+
 from dataclasses import dataclass, field
 from importlib.resources import files, as_file, path
 from importlib.resources.abc import Traversable
 from pathlib import Path
 import fnmatch
 from difflib import get_close_matches
+import textwrap
+
+import pooch
+from fuzzywuzzy import fuzz
 
 from typing import (
     Callable,
@@ -93,11 +99,11 @@ class DataFile:
     def load(self) -> Any:
         if self.loader is None:
             raise ValueError(f"No loader for {self.stem}")
-
-        local = Path(self.pooch.fetch(self.path.as_posix()))
-
+        ### (Download and) Resolve Local Filepath (default is OS cache)
+        local_fp = Path(self.pooch.fetch(self.path.as_posix()))
+        ### Load File
         try:
-            return self.loader(local)
+            return self.loader(local_fp)
         except Exception as e:
             raise ValueError(
                 f"Failed to load '{self.name}' with loader '{self.loader.__name__ if self.loader else 'unknown loader'}'"
@@ -119,14 +125,10 @@ type Resource = DataFile | DataDir
 # === Pooch Registry
 # =====================================================================
 
-import os
-import sys, pooch, pathlib, textwrap
-from pooch import HTTPDownloader
-
 
 def make_pooch_registry(dir: Path) -> None:
 
-    raw_dir = pathlib.Path(dir).expanduser()
+    raw_dir = Path(dir).expanduser()
     manifest = raw_dir / "pooch_registry.txt"
 
     if not manifest.is_file():  # < Create empty .txt
@@ -137,7 +139,7 @@ def make_pooch_registry(dir: Path) -> None:
     print(
         textwrap.dedent(
             f"""
-    Manifest written to {manifest.relative_to(pathlib.Path.cwd())}
+    Manifest written to {manifest.relative_to(Path.cwd())}
     Contains {sum(1 for _ in manifest.open())} entries.
     You can now upload {raw_dir} to your object store and commit the manifest.
     """
@@ -150,7 +152,7 @@ def make_pooch(package: str, base_url: str) -> pooch.Pooch:
     poochy = pooch.create(
         path=pooch.os_cache(package),
         base_url=base_url,
-        registry=None,  # < will be loaded later
+        registry=None,  # < Loaded after creation
         retry_if_failed=2,
     )
     poochy.load_registry(files(package) / "pooch_registry.txt")
@@ -164,12 +166,17 @@ def make_pooch(package: str, base_url: str) -> pooch.Pooch:
 #     """
 #     username = os.environ.get("SOMESITE_USERNAME")
 #     password = os.environ.get("SOMESITE_PASSWORD")
-#     download_auth = HTTPDownloader(auth=(username, password))
+#     download_auth = pooch.HTTPDownloader(auth=(username, password))
 #     return poochy.fetch("some-data.csv", downloader=download_auth)
 
 
+# =====================================================================
+# === Catalogue
+# =====================================================================
+
+
 # ---------------------------------------------------------------------------
-# Helpers
+# --- Helpers
 # ---------------------------------------------------------------------------
 
 
@@ -178,14 +185,9 @@ def _format_key(key: str) -> str:
     return key.lower().strip().replace(" ", "_").replace("-", "_")
 
 
-def _match_any(name: str, globs: Iterable[str]) -> bool:
+def _match_any_globs(name: str, patterns: Iterable[str]) -> bool:
     """Return *True* if *name* matches at least one shell‑style glob."""
-    return any(fnmatch.fnmatchcase(name, g) for g in globs)
-
-
-# =====================================================================
-# === Catalogue
-# =====================================================================
+    return any(fnmatch.fnmatchcase(name, g) for g in patterns)
 
 
 class Catalog(Mapping[str, Resource]):
@@ -209,11 +211,11 @@ class Catalog(Mapping[str, Resource]):
         dir_patterns: Sequence[str] = ("*RAGI*",),
     ) -> None:
         self.package = package
-        self._pooch = pooch
+        self.pooch = pooch
         self.dir_patterns = dir_patterns
 
-        ###
         self._root = files(package)
+        ###
         self._data: Dict[str, Resource] = {}
         self._loaders: Dict[str, Callable[[Path], Any]] = {}
 
@@ -224,52 +226,114 @@ class Catalog(Mapping[str, Resource]):
     # === Build
     # =================================================================
 
-    # def _has_dir_ancestor(self, path: Path) -> bool:
-    #     return any(
-    #         _match_any(parent.name, self.dir_patterns)
-    #         for parent in path.parents
-    #     )
-
-    # def _build(self) -> None:
-    #     for p in self._root.rglob("*"):  # walks files+dirs
-    #         key = p.relative_to(self._root).as_posix()
-    #         key = self._format_key(key)
-    #         # > Generic ignore (any part)
-    #         _ignored: bool = any(
-    #             self._match_any(part, self.IGNORE_PATTERNS) for part in p.parts
-    #         )
-    #         if _ignored:
-    #             continue
-    #         elif p.is_dir() and self._match_any(p.name, self.dir_patterns):
-    #             self._data[key + "/"] = DataDir(p)
-    #         elif self._has_dir_ancestor(p):
-    #             continue  # > Skip everything nested inside a DataDir
-    #         elif p.is_file() and self._match_any(p.name, self.FILE_PATTERNS):
-    #             loader = self._lookup_loaders(
-    #                 key
-    #             ) or u.fileio.get_default_loader(p)
-    #             self._data[key] = DataFile(p, loader=loader)
-
     def _build(self) -> None:
         """Populate ``self._data`` from *pooch* registry entries."""
-        for p in self._pooch.registry.keys():
-
-            if _match_any(p, self.IGNORE_PATTERNS):
+        for p in self.pooch.registry.keys():
+            p = Path(p)
+            if self._is_ignored(p):
                 continue
-
-            key = _format_key(p)
-            _p = Path(p)
-
-            if _match_any(_p.name, self.dir_patterns):
-                self._data[key + "/"] = DataDir(path=_p)
-            elif _match_any(_p.name, self.FILE_PATTERNS):
-                loader = self._lookup_loaders(
+            key, key_dir = self._construct_keys(p)
+            ### DataDir
+            if self._is_datadir(p):
+                self._data[key_dir] = DataDir(path=p.parent)
+            elif self._is_inside_datadir(p):
+                continue  # > Skip everything nested inside a DataDir
+            ### DataFile
+            elif _match_any_globs(p.name, self.FILE_PATTERNS):
+                loader = self._get_customloader(
                     key
-                ) or u.fileio.get_default_loader(_p)
-                self._data[key] = DataFile(_p, self._pooch, loader)
+                ) or u.fileio.get_default_loader(p)
+                self._data[key] = DataFile(p, self.pooch, loader)
+
+    def _construct_keys(self, path: Path) -> tuple[str, str]:
+        """Create a key from the path, normalised for case and whitespace."""
+        _p: Path = Path(path.as_posix())
+        key: str = _format_key(f"{_p.parent}/{_p.name}")
+        key_dir: str = _format_key(f"{_p.parent}/")
+
+        return key, key_dir
+
+    def _is_ignored(self, path: Path) -> bool:
+        return any(
+            _match_any_globs(part, self.IGNORE_PATTERNS) for part in path.parts
+        )
+
+    def _is_datadir(self, path: Path) -> bool:
+        return any(
+            _match_any_globs(part, self.dir_patterns) for part in path.parts
+        )
+
+    def _is_inside_datadir(self, path: Path) -> bool:
+        return path.is_file() and any(
+            _match_any_globs(parent.name, self.dir_patterns)
+            for parent in path.parents
+        )
 
     # =================================================================
-    # === Public Helpers
+    # === Set Custom Loaders
+    # =================================================================
+
+    def set_loader(
+        self, pattern: str
+    ) -> Callable[[Callable[[Path], Any]], Callable[[Path], Any]]:
+        """
+        Decorator: register a custom *loader* for every key that matches *pattern*
+        (shell-style glob, case-insensitive). Raises KeyError if no key matches.
+        """
+
+        def decorator(
+            func: Callable[[Path], Any], pattern: str = pattern
+        ) -> Callable[[Path], Any]:
+            pattern = _format_key(pattern)
+            matches = self.glob(pattern)
+            if not matches:
+                self._raise_key_error(bad_key=pattern)
+            for key in matches:
+                _resource = self._data.get(key)
+                if isinstance(_resource, DataFile):
+                    self._data[key] = DataFile(  # < Replace loader
+                        path=_resource.path,
+                        pooch=self.pooch,
+                        loader=func,
+                    )
+            self._loaders[pattern] = func  # < Store the loader
+            return func
+
+        return decorator
+
+    def _get_customloader(self, key: str) -> Callable[[Path], Any] | None:
+        """Return the first loader whose pattern matches *key* (exact or
+        glob)."""
+        key = _format_key(key)
+        for pattern, loader in self._loaders.items():
+            if fnmatch.fnmatchcase(key, pattern):  # shell-style wildcards
+                return loader
+        return None
+
+    # =================================================================
+    # === Search & Glob
+    # =================================================================
+
+    def search(self, query: str, cutoff: int = 80) -> list[str]:
+        """Searches keys based on fuzzy matching against the query."""
+        query = _format_key(query)
+        matches = []
+        for key in self.keys():
+            if fuzz.partial_ratio(key, query) > cutoff:
+                matches.append(key)
+        return matches
+
+    def glob(self, pattern: str) -> list[str]:
+        """Searches keys based on shell-style glob patterns."""
+        pattern = _format_key(pattern)
+        matches = []
+        for key in self.keys():
+            if fnmatch.fnmatchcase(key, pattern):
+                matches.append(key)
+        return matches
+
+    # =================================================================
+    # === Public: Helpers
     # =================================================================
 
     def load(self, key: str) -> Any | Path:
@@ -293,49 +357,41 @@ class Catalog(Mapping[str, Resource]):
         return sorted(self._data.keys())
 
     def get(self, key: str, default: Any = None) -> Resource | Any:
-        key = self._format_key(key)
+        key = _format_key(key)
         return self._data.get(key, default)
+
+    @property
+    def datadirs(self) -> list[str]:
+        """List all DataDir keys in the catalogue."""
+        return [key for key, res in self._data.items() if isinstance(res, DataDir)]
 
     # =================================================================
     # === Representation
     # =================================================================
 
     def __repr__(self) -> str:
+        loaders_repr = [f"{name} = {loader.__name__ if loader else 'None'}"
+            for name, loader in self._loaders.items()]
+        s = "\n    "
+        
         return (
-            f"<{self.__class__.__name__}(package='{self.package}', dir_patterns={self.dir_patterns})>\n"
-            f"  root='{self._root}'\n"
-            f"  len={len(self)}\n"
-            f"  keys=\n   - {"\n   - ".join(self.keys())}\n"
+            f"<{self.__class__.__name__}(package='{self.package}', dir_patterns={self.dir_patterns}, pooch={self.pooch})>\n"
+            f" ._root = {s}'{self._root}'\n"
+            f" .pooch.base_url = {s}'{self.pooch.base_url}'\n"
+            f" .datadirs = {s}- {f"{s}- ".join(self.datadirs)}\n"
+            f" ._loaders = {s}- {f"{s}- ".join(loaders_repr)}\n"
+            f" len = {len(self)}\n"
+            f" .keys() = {s}- {f"{s}- ".join(self.keys())}\n"
         )
 
-    def __str__(self) -> str:
-        lines = []
-        for key, res in self._data.items():
-            kind = "Dir" if isinstance(res, DataDir) else f"{res.path.suffix}"
-            lines.append(f"({kind}) {key}:\n  Path:\t{res.path}")
-            if isinstance(res, DataFile):
-                lines.append(
-                    f"  Loader:\t{res.loader.__name__ if res.loader else 'None'}"
-                )
-            lines.append("\n")
-        return "\n".join(lines)
 
     # =================================================================
     # === Mapping API
     # =================================================================
 
-    @staticmethod
-    def _format_key(key: str) -> str:
-        """Format the key to simplify it:
-        - Lowercase the key to make it case-insensitive.
-        - Remove leading/trailing whitespace.
-        - Replace whitespace, dashes, and underscores with underscores.
-        """
-        return key.lower().strip().replace(" ", "_").replace("-", "_")
-
     def __getitem__(self, key: str) -> Resource:
         """Catalogue[key] -> Resource"""
-        key = self._format_key(key)
+        key = _format_key(key)
         try:
             resource = self._data[key]
         except:
@@ -347,8 +403,12 @@ class Catalog(Mapping[str, Resource]):
 
     def __len__(self) -> int:
         return len(self._data)
-
-    def _suggest(
+    
+    def __contains__(self, key: str) -> bool:
+        key = _format_key(key)
+        return key in self._data
+    
+    def _suggest_alternative_keys(
         self, bad_key: str, n: int = 2, cutoff: float = 0.6
     ) -> list[str]:
         return get_close_matches(
@@ -360,92 +420,56 @@ class Catalog(Mapping[str, Resource]):
 
     def _raise_key_error(self, bad_key: str) -> None:
         """Raise a KeyError with a custom message."""
-        suggestions = self._suggest(bad_key)
+        suggestions = self._suggest_alternative_keys(bad_key)
         hint = ", ".join(suggestions) if suggestions else "no close matches"
         raise KeyError(
             f"Resource '{bad_key}' not found; Did you mean: '{hint}'?"
         )
 
-    # =================================================================
-    # === Set Custom Loaders
-    # =================================================================
 
-    def set_loader(
-        self, pattern: str
-    ) -> Callable[[Callable[[Path], Any]], Callable[[Path], Any]]:
-        """
-        Decorator: register a custom *loader* for every key that matches *pattern*
-        (shell-style glob, case-insensitive). Raises KeyError if no key matches.
-        """
-
-        def decorator(
-            func: Callable[[Path], Any], pattern: str = pattern
-        ) -> Callable[[Path], Any]:
-            matched = False
-            for key, res in self._data.items():
-                key = self._format_key(key)
-                pattern = self._format_key(pattern)
-                if fnmatch.fnmatchcase(key, pattern):
-                    if isinstance(res, DataFile):
-                        # > Replace loader immediately
-                        self._data[key] = DataFile(
-                            res.path,
-                            pooch=self._pooch,
-                            loader=func,
-                        )
-                        matched = True
-            if not matched:
-                self._raise_key_error(bad_key=key)
-
-            self._loaders[pattern] = (
-                func  # keep for lookup() if you still need it
-            )
-            return func
-
-        return decorator
-
-    def _lookup_loaders(self, key: str) -> Callable[[Path], Any] | None:
-        """Return the first loader whose pattern matches *key* (exact or
-        glob)."""
-        key = self._format_key(key)
-        for pattern, loader in self._loaders.items():
-            if fnmatch.fnmatchcase(key, pattern):  # shell-style wildcards
-                return loader
-        return None
-
+# => ==================================================================
+# => Example Usage
+# => ==================================================================
 
 if __name__ == "__main__":
     from pprint import pprint
-
-    # print(_REGISTRY)
-    # create a catalogue
-    DATASET = "neddata.abbey"  # < Package name of the dataset
-    DB_URL = (
-        "https://raw.githubusercontent.com/HisQu/neddata/refs/heads/main/src"
-    )
-    BASE_URL = f"{DB_URL}/{DATASET.replace('.', '/')}"
-    poochy = make_pooch(DATASET, BASE_URL)
-
-    cat = Catalog("neddata.abbey", pooch=poochy)
-
+    from IPython.display import display
+    
+    ### Import test catalogue
+    from neddata.abbey.catalog import cat
+    
+    # %% Repr
+    cat
     # %%
-    # print the catalogue keys
-    pprint(cat.keys())
-
+    cat.keys()
     # %%
-    cat["Regests/2_Ben-Cist_Identifizierungen.csv"]
-
-    # %%
+    # =========================
+    # === Search & glob
+    # =========================
     # !! Typo lower case
     cat["Regests/2_ben-Cist_Identifizierungen.csv"]
-
     # %%
-    # !! Big
-    cat["Regests/2"]
-
+    cat.glob("*kdb_ben cist*")  # < Search for files in the catalogue
     # %%
-    # pretty-print the catalogue
-    print(cat)
-
+    cat.search("kdb_ben-cist")  # < Search for files wit fuzzy matching
     # %%
-    print(cat.__repr__())
+    cat.search("RAGI")
+    # %%
+
+    # =========================
+    # === pooch
+    # =========================
+    dir(cat.pooch)  # < Show all attributes of the pooch object
+    # %%
+    cat.pooch.registry  # < List all files in the dataset
+    # %%
+    cat.pooch.get_url("KDB/KDB_Ben-Cist.csv")
+    # %%
+    cat.pooch.is_available("KDB/KDB_Ben-Cist.csv")
+    # %%
+    cat.pooch.fetch("KDB/KDB_Ben-Cist.csv")
+    
+    # %%
+    cat.pooch.registry
+
+

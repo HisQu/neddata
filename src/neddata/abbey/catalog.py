@@ -11,12 +11,10 @@ from neddata import datamodel as dm
 
 # %%
 
-DATASET = "neddata.abbey" # < Package name of the dataset
+DATASET = "neddata.abbey"  # < Package name of the dataset
 
 DB_URL = "https://raw.githubusercontent.com/HisQu/neddata/refs/heads/main/src"
 BASE_URL = f"{DB_URL}/{DATASET.replace('.', '/')}"
-
-print(BASE_URL)
 
 
 # > Patterns to define what directory is a DataDir and not a normal folder
@@ -26,30 +24,18 @@ DATADIR_PATTERNS = [
 
 
 # %%
+# => Make a Pooch Registry
 if __name__ == "__main__":
     from importlib.resources import files
+
     package = files(DATASET)
     package
     # %%
-    # dm.make_pooch_registry(dir=package)
+    dm.make_pooch_registry(dir=package)
     # %%
 
 
 POOCHY = dm.make_pooch(DATASET, BASE_URL)
-
-
-if __name__ == "__main__":
-    POOCHY
-    # %%
-    dir(POOCHY)  # < Show all attributes of the pooch object
-    # %%
-    POOCHY.registry  # < List all files in the dataset
-    # %%
-    POOCHY.get_url("KDB/KDB_Ben-Cist.csv")
-    # %%
-    POOCHY.is_available("KDB/KDB_Ben-Cist.csv")
-    # %%
-    POOCHY.fetch("KDB/KDB_Ben-Cist.csv")
 
 
 # %%
@@ -95,13 +81,8 @@ def load_ben_cist_data(path: Path) -> pd.DataFrame:
 
 if __name__ == "__main__":
     from IPython.display import display
-
-    pprint(cat._loaders)
-    # print(cat)
-    # %%
+    
     _key = "Regests/2_Ben-cist_Identifizierungen.csv"
-    print(cat[_key].path)
-    print(cat[_key].loader)  # type: ignore
 
     #  %%
     ### Load conventionally
@@ -111,12 +92,7 @@ if __name__ == "__main__":
     display(df)
     # %%
     ### Load from the catalogue
+    print(cat[_key].path)
+    print(cat[_key].loader)  # type: ignore
     df = cat.load(_key)
     display(df)
-    # %%
-    _key = "Regests/2_ben-Cist.xlsx"
-    a = cat.get(_key)  # < Get the file from the catalogue
-    df = cat.load(_key)  # < Load the file using the registered loader
-    display(df)
-    # %%
-    print(cat)
