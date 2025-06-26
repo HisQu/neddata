@@ -81,7 +81,7 @@ def load_ben_cist_data(path: Path) -> pd.DataFrame:
 
 if __name__ == "__main__":
     from IPython.display import display
-    
+
     _key = "Regests/2_Ben-cist_Identifizierungen.csv"
 
     #  %%

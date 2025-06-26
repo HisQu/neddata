@@ -363,17 +363,21 @@ class Catalog(Mapping[str, Resource]):
     @property
     def datadirs(self) -> list[str]:
         """List all DataDir keys in the catalogue."""
-        return [key for key, res in self._data.items() if isinstance(res, DataDir)]
+        return [
+            key for key, res in self._data.items() if isinstance(res, DataDir)
+        ]
 
     # =================================================================
     # === Representation
     # =================================================================
 
     def __repr__(self) -> str:
-        loaders_repr = [f"{name} = {loader.__name__ if loader else 'None'}"
-            for name, loader in self._loaders.items()]
+        loaders_repr = [
+            f"{name} = {loader.__name__ if loader else 'None'}"
+            for name, loader in self._loaders.items()
+        ]
         s = "\n    "
-        
+
         return (
             f"<{self.__class__.__name__}(package='{self.package}', dir_patterns={self.dir_patterns}, pooch={self.pooch})>\n"
             f" ._root = {s}'{self._root}'\n"
@@ -383,7 +387,6 @@ class Catalog(Mapping[str, Resource]):
             f" len = {len(self)}\n"
             f" .keys() = {s}- {f"{s}- ".join(self.keys())}\n"
         )
-
 
     # =================================================================
     # === Mapping API
@@ -403,11 +406,11 @@ class Catalog(Mapping[str, Resource]):
 
     def __len__(self) -> int:
         return len(self._data)
-    
+
     def __contains__(self, key: str) -> bool:
         key = _format_key(key)
         return key in self._data
-    
+
     def _suggest_alternative_keys(
         self, bad_key: str, n: int = 2, cutoff: float = 0.6
     ) -> list[str]:
@@ -434,10 +437,10 @@ class Catalog(Mapping[str, Resource]):
 if __name__ == "__main__":
     from pprint import pprint
     from IPython.display import display
-    
+
     ### Import test catalogue
     from neddata.abbey.catalog import cat
-    
+
     # %% Repr
     cat
     # %%
@@ -468,8 +471,6 @@ if __name__ == "__main__":
     cat.pooch.is_available("KDB/KDB_Ben-Cist.csv")
     # %%
     cat.pooch.fetch("KDB/KDB_Ben-Cist.csv")
-    
+
     # %%
     cat.pooch.registry
-
-
