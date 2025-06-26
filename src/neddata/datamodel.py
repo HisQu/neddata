@@ -375,6 +375,7 @@ class Catalog(Mapping[str, Resource]):
         Load a resource by its key. If the resource is a DataFile, it will
         be loaded using its loader function.
         """
+        key = _format_key(key)
         if not key in self._data:
             self._raise_key_error(bad_key=key)
         return self._data[key].load()

@@ -80,7 +80,6 @@ def load_ben_cist_data(path: Path) -> pd.DataFrame:
     return df
 
 
-
 if __name__ == "__main__":
     from IPython.display import display
 
@@ -98,3 +97,24 @@ if __name__ == "__main__":
     print(cat[_key].loader)  # type: ignore
     df = cat.load(_key)
     display(df)
+
+# %%
+@cat.set_loader("KDB/KDB*.csv")
+def load_utf8_csv(path: Path) -> pd.DataFrame:
+    """Load a CSV file with UTF-8 encoding."""
+    df = pd.read_csv(path, encoding="utf-8", sep=";")
+    return df
+
+if __name__ == "__main__":
+    _key = "KDB/KDB_complete.csv"
+    # _key = 'kdb/kdb_complete.csv'
+    print(cat[_key].path)  # < Print the path to the file
+    print(cat[_key].loader)  # < Print the loader function name
+    # %%
+    df = cat.load(_key)
+    display(df.head())
+    
+    # %%
+    _key = "KDB/KDB_ben-cist.csv"
+    print(cat[_key].path)  # < Print the path to the file
+    print(cat[_key].loader)  # < Print the loader function name
