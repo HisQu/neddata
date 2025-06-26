@@ -27,7 +27,8 @@ DATADIR_PATTERNS = [
 # => Make a Pooch Registry
 if __name__ == "__main__":
     from importlib.resources import files
-
+    print(Path.cwd())
+    # %%
     package = files(DATASET)
     package
     # %%
@@ -77,6 +78,7 @@ def load_ben_cist_data(path: Path) -> pd.DataFrame:
     ### Build the DataFrame and name your columns
     df = pd.DataFrame(rows, columns=columns).drop_duplicates()
     return df
+
 
 
 if __name__ == "__main__":
