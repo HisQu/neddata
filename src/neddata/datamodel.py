@@ -14,7 +14,7 @@ from difflib import get_close_matches
 import textwrap
 
 import pooch
-from fuzzywuzzy import fuzz
+from rapidfuzz import fuzz
 
 from typing import (
     Callable,
@@ -87,10 +87,13 @@ class Resource:
     def __init__(self, path: Path, pooch: pooch.Pooch) -> None:
         self.path = path  # < Path relative to the package root
         self.pooch = pooch
+        
+        if path.is_absolute():
+            raise ValueError(f"Resource path must be relative, not absolute: {path}")
     
-    def load(self):
+    def load(self) -> Path:
         """Placeholder, every Resource requires a load() method."""
-        pass
+        return self.path
 
     @property
     def path_local(self) -> Path:
@@ -120,10 +123,8 @@ class DataFile(Resource):
     ) -> None:
         super().__init__(path, pooch)
         self.loader = loader
-        if self.loader is None:
-            self.loader = u.fileio.get_default_loader(path)
 
-    def load(self):
+    def load(self) -> Any:
         if self.loader is None:
             raise ValueError(f"No loader for {self.stem}")
         ### (Download and) Resolve Local Filepath (default is OS cache)
@@ -148,6 +149,7 @@ class DataDir(Resource):
 
     def __init__(self, path: Path, pooch: pooch.Pooch) -> None:
         super().__init__(path, pooch)
+        self._unpacked = False  # < Whether the archive has been extracted
         # self._ensure_downloaded()
 
     def load(self) -> Path:
@@ -170,6 +172,7 @@ class DataDir(Resource):
         Fetch all required files **once**. Idempotent and safe
         under multiprocessing thanks to Pooch's file lock.
         """
+        
         if self.path_local.exists():
             return  # !! already cached
         if self.is_archive:
@@ -181,16 +184,22 @@ class DataDir(Resource):
         """Unpack the directory if it is an archive.
         This is a no-op if the directory is not an archive.
         """
+        ### Assertions
         if not self.is_archive:
             raise ValueError(
                 f"Cannot unpack {self.name}: Not an archive (zip/tar)."
             )
+        if self._unpacked:
+            return  # !! already unpacked
+        
+        ### Unpack
         processor = (
             pooch.Untar(extract_dir=str(self.path))
             if self.name.endswith((".tar.gz", ".tgz", ".tar"))
             else pooch.Unzip(extract_dir=str(self.path))  # zip variant
         )
-        self.pooch.fetch(self.name, processor=processor)
+        self.pooch.fetch(self.path.as_posix(), processor=processor)
+        self._unpacked = True  # < Mark as unpacked
 
     def _fetch_piecewise(self) -> None:
         """Fetch all files in the directory piece-wise.
@@ -205,6 +214,8 @@ class DataDir(Resource):
             fname: str
             if fname.startswith(prefix):
                 self.pooch.fetch(fname)
+    
+    
 
 
 # =====================================================================
@@ -359,16 +370,14 @@ class Catalog(Mapping[str, Resource]):
     # === Load
     # =================================================================
 
-    def load(self, key: str):
+    def load(self, key: str) -> Any:
         """
         Load a resource by its key. If the resource is a DataFile, it will
         be loaded using its loader function.
         """
-        try:
-            resource: Resource = self[key]
-        except KeyError as e:
+        if not key in self._data:
             self._raise_key_error(bad_key=key)
-        return resource.load()
+        return self._data[key].load()
 
     # =================================================================
     # === Custom Loader
@@ -483,11 +492,9 @@ class Catalog(Mapping[str, Resource]):
     def __getitem__(self, key: str) -> Resource:
         """Catalogue[key] -> Resource"""
         key = _format_key(key)
-        try:
-            resource = self._data[key]
-        except:
+        if not key in self._data:
             self._raise_key_error(bad_key=key)
-        return resource
+        return self._data[key]
 
     def __iter__(self) -> Iterator[str]:
         return iter(self._data)
@@ -536,15 +543,21 @@ if __name__ == "__main__":
     # %%
     cat.keys()
     # %%
+    # === key typos ===
+    # !! Typo lower case
+    cat["Regests/2_ben-Cist_Identifizierungen.csv"]
+    
+    # %%
+    # cat["Regästs/2_ben-Cist_Identifizierungen.csv"] # !! raises
+    
+    # %%
     # =========================
     # === Search & glob
     # =========================
-    # !! Typo lower case
-    cat["Regests/2_ben-Cist_Identifizierungen.csv"]
     # %%
     cat.glob("*kdb_ben cist*")  # < Search for files in the catalogue
     # %%
-    cat.search("kdb_ben-cist")  # < Search for files wit fuzzy matching
+    cat.search("kdb_ben-cist", cutoff=75)  # < Search for files wit fuzzy matching
     # %%
     cat.search("RAGI")
     # %%
@@ -578,8 +591,11 @@ if __name__ == "__main__":
     # =========================
     cat
     # %%
-    r = cat.load("kdb/kdb_complete_ragi/")
-
+    _key="kdb/kdb_complete_ragi/"
+    print(cat[_key].name)
+    print(cat[_key].path)
+    # %%
+    r = cat.load(_key)
     print(r)
 
     # %%
