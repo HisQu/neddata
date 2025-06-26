@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, InitVar
 from importlib.resources import files, as_file, path
 from importlib.resources.abc import Traversable
 from pathlib import Path
@@ -78,15 +78,24 @@ example tree structure:
 
 
 # =====================================================================
-# === Resources (DataFile | DataDir)
+# === Resource, DataFile, DataDir
 # =====================================================================
 
 
-@dataclass(frozen=True, slots=True)
-class DataFile:
-    path: Path
-    pooch: pooch.Pooch = field(repr=False, compare=False)
-    loader: Callable[[Path], Any] | None = None
+class Resource:
+
+    def __init__(self, path: Path, pooch: pooch.Pooch) -> None:
+        self.path = path  # < Path relative to the package root
+        self.pooch = pooch
+    
+    def load(self):
+        """Placeholder, every Resource requires a load() method."""
+        pass
+
+    @property
+    def path_local(self) -> Path:
+        cache_root = self.pooch.abspath
+        return cache_root / self.path
 
     @property
     def stem(self) -> str:
@@ -96,29 +105,106 @@ class DataFile:
     def name(self) -> str:
         return self.path.name
 
-    def load(self) -> Any:
+
+# === DataFile ========================================================
+
+
+class DataFile(Resource):
+    """A DataFile is a file that is catalogued and can be loaded using a loader function."""
+
+    def __init__(
+        self,
+        path: Path,
+        pooch: pooch.Pooch,
+        loader: Callable[[Path], Any] | None = None,
+    ) -> None:
+        super().__init__(path, pooch)
+        self.loader = loader
+        if self.loader is None:
+            self.loader = u.fileio.get_default_loader(path)
+
+    def load(self):
         if self.loader is None:
             raise ValueError(f"No loader for {self.stem}")
         ### (Download and) Resolve Local Filepath (default is OS cache)
         local_fp = Path(self.pooch.fetch(self.path.as_posix()))
-        ### Load File
         try:
-            return self.loader(local_fp)
+            return self.loader(local_fp)  # < Load file
         except Exception as e:
             raise ValueError(
                 f"Failed to load '{self.name}' with loader '{self.loader.__name__ if self.loader else 'unknown loader'}'"
             ) from e
 
 
-@dataclass(frozen=True, slots=True)
-class DataDir:
-    path: Path
+# === DataDir ========================================================
+
+
+class DataDir(Resource):
+    """
+    A DataDir is a directory (or compressed archive) that contains
+    files, but those files are not catalogued individually. Instead, the
+    directory itself is catalogued.
+    """
+
+    def __init__(self, path: Path, pooch: pooch.Pooch) -> None:
+        super().__init__(path, pooch)
+        # self._ensure_downloaded()
+
+    def load(self) -> Path:
+        """DataDir does not load anything, it is a directory."""
+        self._ensure_downloaded()  # < Ensure all files are downloaded
+        return self.path_local
+        # local_fp = Path(self.pooch.fetch(self.path.as_posix()))
 
     def list(self) -> list[str]:
-        return [p.name for p in self.path.iterdir() if p.is_file()]
+        self._ensure_downloaded()
+        return [p.name for p in self.path_local.iterdir() if p.is_file()]
 
+    @property
+    def is_archive(self) -> bool:
+        """Check if the directory is an archive (e.g., a zip file)."""
+        return self.path.suffix in {".zip", ".tar", ".tar.gz", ".tgz"}
 
-type Resource = DataFile | DataDir
+    def _ensure_downloaded(self) -> None:
+        """
+        Fetch all required files **once**. Idempotent and safe
+        under multiprocessing thanks to Pooch's file lock.
+        """
+        if self.path_local.exists():
+            return  # !! already cached
+        if self.is_archive:
+            self._fetch_archive()
+        else:
+            self._fetch_piecewise()
+
+    def _fetch_archive(self) -> None:
+        """Unpack the directory if it is an archive.
+        This is a no-op if the directory is not an archive.
+        """
+        if not self.is_archive:
+            raise ValueError(
+                f"Cannot unpack {self.name}: Not an archive (zip/tar)."
+            )
+        processor = (
+            pooch.Untar(extract_dir=str(self.path))
+            if self.name.endswith((".tar.gz", ".tgz", ".tar"))
+            else pooch.Unzip(extract_dir=str(self.path))  # zip variant
+        )
+        self.pooch.fetch(self.name, processor=processor)
+
+    def _fetch_piecewise(self) -> None:
+        """Fetch all files in the directory piece-wise.
+        This is a no-op if the directory is not an archive.
+        """
+        if self.is_archive:
+            raise ValueError(
+                f"Cannot fetch piecewise {self.name}: Is an archive (zip/tar)."
+            )
+        prefix = f"{self.path.as_posix()}/"
+        for fname in self.pooch.registry:
+            fname: str
+            if fname.startswith(prefix):
+                self.pooch.fetch(fname)
 
 
 # =====================================================================
@@ -235,7 +321,7 @@ class Catalog(Mapping[str, Resource]):
             key, key_dir = self._construct_keys(p)
             ### DataDir
             if self._is_datadir(p):
-                self._data[key_dir] = DataDir(path=p.parent)
+                self._data[key_dir] = DataDir(p.parent, self.pooch)
             elif self._is_inside_datadir(p):
                 continue  # > Skip everything nested inside a DataDir
             ### DataFile
@@ -270,7 +356,22 @@ class Catalog(Mapping[str, Resource]):
         )
 
     # =================================================================
-    # === Set Custom Loaders
+    # === Load
+    # =================================================================
+
+    def load(self, key: str):
+        """
+        Load a resource by its key. If the resource is a DataFile, it will
+        be loaded using its loader function.
+        """
+        try:
+            resource: Resource = self[key]
+        except KeyError as e:
+            self._raise_key_error(bad_key=key)
+        return resource.load()
+
+    # =================================================================
+    # === Custom Loader
     # =================================================================
 
     def set_loader(
@@ -282,7 +383,7 @@ class Catalog(Mapping[str, Resource]):
         """
 
         def decorator(
-            func: Callable[[Path], Any], pattern: str = pattern
+            func: Callable[[Path]], pattern: str = pattern
         ) -> Callable[[Path], Any]:
             pattern = _format_key(pattern)
             matches = self.glob(pattern)
@@ -335,19 +436,6 @@ class Catalog(Mapping[str, Resource]):
     # =================================================================
     # === Public: Helpers
     # =================================================================
-
-    def load(self, key: str) -> Any | Path:
-        """
-        Load a resource by its key. If the resource is a DataFile, it will
-        be loaded using its loader function.
-        """
-        resource = self[key]
-        if isinstance(resource, DataFile):
-            return resource.load()
-        elif isinstance(resource, DataDir):
-            return resource.path
-        else:
-            raise TypeError(f"Unknown resource type: {type(resource)}")
 
     def items(self) -> Iterable[tuple[str, Resource]]:
         return self._data.items()
@@ -438,6 +526,8 @@ if __name__ == "__main__":
     from pprint import pprint
     from IPython.display import display
 
+    import pandas as pd
+
     ### Import test catalogue
     from neddata.abbey.catalog import cat
 
@@ -458,7 +548,6 @@ if __name__ == "__main__":
     # %%
     cat.search("RAGI")
     # %%
-
     # =========================
     # === pooch
     # =========================
@@ -473,4 +562,24 @@ if __name__ == "__main__":
     cat.pooch.fetch("KDB/KDB_Ben-Cist.csv")
 
     # %%
+    print(type(cat.pooch.registry))
     cat.pooch.registry
+
+    # %%
+    # =========================
+    # === load DataFiles
+    # =========================
+    df: pd.DataFrame = cat.load("Regests/2_ben-Cist Identifizierungen.csv")
+    display(df.head())  # < Display the first few rows of the DataFrame
+
+    # %%
+    # =========================
+    # === load DataDirs
+    # =========================
+    cat
+    # %%
+    r = cat.load("kdb/kdb_complete_ragi/")
+
+    print(r)
+
+    # %%
