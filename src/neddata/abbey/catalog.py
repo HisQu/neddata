@@ -109,12 +109,11 @@ if __name__ == "__main__":
     _key = "KDB/KDB_complete.csv"
     # _key = 'kdb/kdb_complete.csv'
     print(cat[_key].path)  # < Print the path to the file
-    print(cat[_key].loader)  # < Print the loader function name
-    # %%
+    print(cat[_key].loader)  # type: ignore
     df = cat.load(_key)
     display(df.head())
     
     # %%
     _key = "KDB/KDB_ben-cist.csv"
     print(cat[_key].path)  # < Print the path to the file
-    print(cat[_key].loader)  # < Print the loader function name
+    print(cat[_key].loader)  # type: ignore

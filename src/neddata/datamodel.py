@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 from importlib.resources import files
+from importlib.resources.abc import Traversable
 from pathlib import Path
 import fnmatch
 from difflib import get_close_matches
@@ -220,9 +221,9 @@ class DataDir(Resource):
 # =====================================================================
 
 
-def make_pooch_registry(dir: Path) -> None:
+def make_pooch_registry(dir: Path | Traversable) -> None:
 
-    raw_dir = Path(dir).expanduser()
+    raw_dir = Path(str(dir)).expanduser()
     manifest = raw_dir / "pooch_registry.txt"
 
     if not manifest.is_file():  # < Create empty .txt
