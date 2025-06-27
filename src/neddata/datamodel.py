@@ -4,10 +4,7 @@
 
 from __future__ import annotations
 
-
-from dataclasses import dataclass, field, InitVar
-from importlib.resources import files, as_file, path
-from importlib.resources.abc import Traversable
+from importlib.resources import files
 from pathlib import Path
 import fnmatch
 from difflib import get_close_matches
@@ -87,10 +84,12 @@ class Resource:
     def __init__(self, path: Path, pooch: pooch.Pooch) -> None:
         self.path = path  # < Path relative to the package root
         self.pooch = pooch
-        
+
         if path.is_absolute():
-            raise ValueError(f"Resource path must be relative, not absolute: {path}")
-    
+            raise ValueError(
+                f"Resource path must be relative, not absolute: {path}"
+            )
+
     def load(self) -> Path:
         """Placeholder, every Resource requires a load() method."""
         return self.path
@@ -172,7 +171,7 @@ class DataDir(Resource):
         Fetch all required files **once**. Idempotent and safe
         under multiprocessing thanks to Pooch's file lock.
         """
-        
+
         if self.path_local.exists():
             return  # !! already cached
         if self.is_archive:
@@ -191,7 +190,7 @@ class DataDir(Resource):
             )
         if self._unpacked:
             return  # !! already unpacked
-        
+
         ### Unpack
         processor = (
             pooch.Untar(extract_dir=str(self.path))
@@ -214,8 +213,6 @@ class DataDir(Resource):
             fname: str
             if fname.startswith(prefix):
                 self.pooch.fetch(fname)
-    
-    
 
 
 # =====================================================================
@@ -547,10 +544,10 @@ if __name__ == "__main__":
     # === key typos ===
     # !! Typo lower case
     cat["Regests/2_ben-Cist_Identifizierungen.csv"]
-    
+
     # %%
     # cat["Regästs/2_ben-Cist_Identifizierungen.csv"] # !! raises
-    
+
     # %%
     # =========================
     # === Search & glob
@@ -558,7 +555,9 @@ if __name__ == "__main__":
     # %%
     cat.glob("*kdb_ben cist*")  # < Search for files in the catalogue
     # %%
-    cat.search("kdb_ben-cist", cutoff=75)  # < Search for files wit fuzzy matching
+    cat.search(
+        "kdb_ben-cist", cutoff=75
+    )  # < Search for files wit fuzzy matching
     # %%
     cat.search("RAGI")
     # %%
@@ -592,7 +591,7 @@ if __name__ == "__main__":
     # =========================
     cat
     # %%
-    _key="kdb/kdb_complete_ragi/"
+    _key = "kdb/kdb_complete_ragi/"
     print(cat[_key].name)
     print(cat[_key].path)
     # %%
