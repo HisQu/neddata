@@ -93,6 +93,13 @@ where = ["src"]                       # < Scan only src/ for packages
 # "share/neddata/examples" = ["examples/*.ipynb"]
 # "share/neddata/config"   = ["config/*.ini"]
 
+# =====================================================================
+# === Terminal entry points
+# =====================================================================
+
+[project.scripts]
+neddata = "neddata.cli:main"
+
 
 # =====================================================================
 # === Tool configurations
