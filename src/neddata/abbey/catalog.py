@@ -23,8 +23,8 @@ DATADIR_PATTERNS = [
 
 
 # %%
-# => Make the pooch_registry.txt
-# !! Repeat after every change
+# => Make / update the pooch_registry.txt
+# !! Repeat after every change, can also call 
 if __name__ == "__main__":
     from importlib.resources import files
     print(Path.cwd())
