@@ -1,6 +1,7 @@
 import argparse
 import importlib.resources as ir
 
+from neddata._tools.assert_editable import assert_editable
 from neddata.datamodel import make_pooch_registry
 
 
@@ -32,13 +33,8 @@ def _run(args: argparse.Namespace) -> None:
         args.package = "neddata." + args.package
     pkg_path = ir.files(args.package)
     
+    ### Assertions
+    assert_editable("neddata")
+    
     ### Register
-    try:
-        make_pooch_registry(pkg_path)
-    # > If not editable full clone, key error is likely during import process
-    except KeyError as e:
-        print(f"Error: {e}")
-        print(
-            "This command requires a full clone of the dataset package and an editable install."
-        )
-        return
+    make_pooch_registry(pkg_path)
