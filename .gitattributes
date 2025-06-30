@@ -9,8 +9,12 @@
 ### Human-readable tabular/text that you don't want Git to diff
 *.csv    binary           
 *.json   binary
+*.pdf    binary
 ### Treat real binaries as such
 *.xlsx   binary
 *.npy    binary
 *.pickle binary
 *.index  binary
+
+### Treat .md inside src/ as binaries as well
+src/**/*.md binary
