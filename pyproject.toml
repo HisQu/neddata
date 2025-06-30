@@ -52,6 +52,8 @@ dev = [
     # "black>=25.1",
     # "ruff>=0.4",
     # "mypy>=1.10",
+    # --- Automation ---------------------
+    # "nox",
     # --- Plotting -----------------------
     "matplotlib",
     "seaborn",

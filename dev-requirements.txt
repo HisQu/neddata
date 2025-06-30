@@ -123,6 +123,8 @@ pyzmq==27.0.0
     # via
     #   ipykernel
     #   jupyter-client
+rapidfuzz==3.13.0
+    # via neddata (pyproject.toml)
 requests==2.32.4
     # via
     #   neddata (pyproject.toml)

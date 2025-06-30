@@ -36,6 +36,8 @@ python-dotenv==1.1.0
     # via environs
 pytz==2025.2
     # via pandas
+rapidfuzz==3.13.0
+    # via neddata (pyproject.toml)
 requests==2.32.4
     # via
     #   neddata (pyproject.toml)
