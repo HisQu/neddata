@@ -10,9 +10,8 @@ from neddata import datamodel as dm
 
 
 # %%
-
+# => Configure the Dataset
 DATASET = "neddata.abbey"  # < Package name of the dataset
-
 DB_URL = "https://raw.githubusercontent.com/HisQu/neddata/refs/heads/main/src"
 BASE_URL = f"{DB_URL}/{DATASET.replace('.', '/')}"
 
@@ -24,7 +23,8 @@ DATADIR_PATTERNS = [
 
 
 # %%
-# => Make a Pooch Registry
+# => Make the pooch_registry.txt
+# !! Repeat after every change
 if __name__ == "__main__":
     from importlib.resources import files
     print(Path.cwd())
