@@ -17,7 +17,7 @@ def is_editable(pkg_name: str = "neddata") -> bool:
     return False
 
 
-def _has_egg_link(pkg_name: str) -> bool:
+def _has_egg_link(pkg_name: str = "neddata") -> bool:
     sp_dirs = site.getsitepackages() + [site.getusersitepackages()]
     for sp in sp_dirs:
         link = Path(sp, f"{pkg_name}.egg-link")
