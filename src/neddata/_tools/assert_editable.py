@@ -1,34 +1,37 @@
+# neddata/_tools/assert_editable.py
+from __future__ import annotations
+
 import json
+import sys
+from importlib import metadata
 from pathlib import Path
-import site, pkg_resources
-from importlib.metadata import PackageNotFoundError, distribution
+import site
 
-
-def is_editable(pkg_name: str = "neddata") -> bool:
-    try:
-        dist = distribution(pkg_name)
-    except PackageNotFoundError:
-        return False  # not installed at all
-
-    direct_url = dist.read_text("direct_url.json")
-    if direct_url:
-        data = json.loads(direct_url)
-        return data.get("dir_info", {}).get("editable", False)
+def _is_editable_via_direct_url(dist: metadata.Distribution) -> bool:
+    txt = dist.read_text("direct_url.json")
+    if txt:
+        try:
+            info = json.loads(txt)
+        except ValueError:
+            return False
+        return info.get("dir_info", {}).get("editable", False)
     return False
 
-
-def _has_egg_link(pkg_name: str = "neddata") -> bool:
+def _has_egg_link(pkg_name: str) -> bool:
     sp_dirs = site.getsitepackages() + [site.getusersitepackages()]
-    for sp in sp_dirs:
-        link = Path(sp, f"{pkg_name}.egg-link")
-        if link.is_file():
-            return True
-    return False
+    return any(Path(d, f"{pkg_name}.egg-link").is_file() for d in sp_dirs)
 
+def assert_editable(pkg_name: str = "neddata") -> None:
+    """Abort if *pkg_name* is not installed in editable/develop mode."""
+    try:
+        dist = metadata.distribution(pkg_name)
+    except metadata.PackageNotFoundError:
+        raise RuntimeError(f"{pkg_name} is not installed at all") from None
 
-def assert_editable(pkg="neddata") -> None:
-    if is_editable(pkg) or _has_egg_link(pkg):
+    if _is_editable_via_direct_url(dist) or _has_egg_link(pkg_name):
         return
+
     raise RuntimeError(
-        f"{pkg} must be installed in editable mode (`pip install -e .`)."
+        f"{pkg_name} must be installed editably (`pip install -e .`) "
+        "to run registry-maintenance commands."
     )
