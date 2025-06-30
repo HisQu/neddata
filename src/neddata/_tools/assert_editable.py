@@ -7,6 +7,7 @@ from importlib import metadata
 from pathlib import Path
 import site
 
+
 def _is_editable_via_direct_url(dist: metadata.Distribution) -> bool:
     txt = dist.read_text("direct_url.json")
     if txt:
@@ -17,9 +18,11 @@ def _is_editable_via_direct_url(dist: metadata.Distribution) -> bool:
         return info.get("dir_info", {}).get("editable", False)
     return False
 
+
 def _has_egg_link(pkg_name: str) -> bool:
     sp_dirs = site.getsitepackages() + [site.getusersitepackages()]
     return any(Path(d, f"{pkg_name}.egg-link").is_file() for d in sp_dirs)
+
 
 def assert_editable(pkg_name: str = "neddata") -> None:
     """Abort if *pkg_name* is not installed in editable/develop mode."""
