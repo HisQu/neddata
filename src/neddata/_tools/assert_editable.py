@@ -30,6 +30,5 @@ def assert_editable(pkg="neddata") -> None:
     if is_editable(pkg) or _has_egg_link(pkg):
         return
     raise RuntimeError(
-        f"{pkg} must be installed in editable mode (`pip install -e .`) to run "
-        "`neddata register`"
+        f"{pkg} must be installed in editable mode (`pip install -e .`)."
     )

@@ -27,14 +27,14 @@ def _add_my_parser(subparsers: argparse._SubParsersAction) -> None:
 
 
 def _run(args: argparse.Namespace) -> None:
-    
+
     ### Add "neddata." prefix if not present
     if not args.package.startswith("neddata."):
         args.package = "neddata." + args.package
     pkg_path = ir.files(args.package)
-    
+
     ### Assertions
     assert_editable("neddata")
-    
+
     ### Register
     make_pooch_registry(pkg_path)
