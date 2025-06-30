@@ -8,7 +8,7 @@ from importlib.resources import files
 from importlib.resources.abc import Traversable
 from pathlib import Path
 import fnmatch
-from difflib import get_close_matches
+import difflib
 import textwrap
 
 import pooch
@@ -507,21 +507,22 @@ class Catalog(Mapping[str, Resource]):
 
     def _suggest_alternative_keys(
         self, bad_key: str, n: int = 2, cutoff: float = 0.6
-    ) -> list[str]:
-        return get_close_matches(
+    ) -> str:
+        close_matches: list[str] = difflib.get_close_matches(
             bad_key,
             self._data.keys(),  # possibilities
             n=n,
             cutoff=cutoff,  # 0.0 = very lenient, 1.0 = exact
         )
+        if close_matches:
+            return f"Did you mean: {', '.join(close_matches)}?"
+        else:
+            return "(No close matches found.)"
 
     def _raise_key_error(self, bad_key: str) -> None:
         """Raise a KeyError with a custom message."""
         suggestions = self._suggest_alternative_keys(bad_key)
-        hint = ", ".join(suggestions) if suggestions else "no close matches"
-        raise KeyError(
-            f"Resource '{bad_key}' not found; Did you mean: '{hint}'?"
-        )
+        raise KeyError(f"Resource '{bad_key}' not found. {suggestions}")
 
 
 # => ==================================================================
