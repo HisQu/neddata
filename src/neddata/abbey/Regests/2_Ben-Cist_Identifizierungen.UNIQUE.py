@@ -5,7 +5,7 @@ from IPython.display import display
 from pathlib import Path
 
 from neddata import abbey_catalog
-
+import neddata.utils as u
 
 # %%
 regest_df: pd.DataFrame = abbey_catalog.load(
@@ -29,33 +29,23 @@ print(f"Number of duplicate regests: {duplicates.sum()}")
 # reg_count = regest_df_u.index
 # print(f"Number of unique regests: {reg_count}")
 
+
 # %%
 ### Make a Dataframe
 # > Where each row is a unique regest "complete_no_tags"
 # > Implode all other columns
-# %%
-# > Identify all columns except the groupby key
-columns_to_agg = [col for col in regest_df.columns if col != "complete_no_tags"]
-columns_to_agg
-
-# %%
-# > Assign the aggregator function to each column
-# > Use default arg to capture current `col`
-agg_dict = {
-    col: lambda x, col=col: ", ".join(sorted(set(x))) for col in columns_to_agg
-}
-agg_dict
-
-# %%
-regest_df_unique = (
-    regest_df.groupby("complete_no_tags", as_index=False)
-    .agg(agg_dict)
-    .sort_values("id_RG")
+regest_df_unique = u.pd.implode(
+    regest_df,
+    groupby_col="complete_no_tags",
+    as_index=False,
 )
+regest_df_unique.sort_values("id_RG", inplace=True)
+
 print(f"Number of unique regests: {len(regest_df_unique)}")
-regest_df_unique.head(5)
+display(regest_df_unique)
 
 # %%
+### Save it
 regest_df_unique.to_excel(
     "2_Ben-Cist_Identifizierungen.UNIQUE.xlsx", index=False
 )
