@@ -34,12 +34,16 @@ print(f"Number of duplicate regests: {duplicates.sum()}")
 ### Make a Dataframe
 # > Where each row is a unique regest "complete_no_tags"
 # > Implode all other columns
-regest_df_unique = u.pd.implode(
-    regest_df,
-    groupby_col="complete_no_tags",
-    as_index=False,
+regest_df_unique = (
+    u.pd.implode(
+        regest_df,
+        groupby_col="complete_no_tags",
+        as_index=False,
+    )
+    .set_index("id_RG")
+    .sort_index(ascending=True, inplace=False)
+    .reset_index(drop=False)  # < Add an index starting at 0 for orientation
 )
-regest_df_unique.sort_values("id_RG", inplace=True)
 
 print(f"Number of unique regests: {len(regest_df_unique)}")
 display(regest_df_unique)
@@ -47,7 +51,7 @@ display(regest_df_unique)
 # %%
 ### Save it
 regest_df_unique.to_excel(
-    "2_Ben-Cist_Identifizierungen.UNIQUE.xlsx", index=False
+    "2_Ben-Cist_Identifizierungen.UNIQUE.xlsx", index=True
 )
 
 # %%
