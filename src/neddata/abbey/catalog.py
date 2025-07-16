@@ -7,6 +7,7 @@ import pandas as pd
 
 ### Local Imports
 from neddata import datamodel as dm
+import neddata.utils as u
 
 
 # %%
@@ -24,7 +25,7 @@ DATADIR_PATTERNS = [
 
 # %%
 # => Make / update the pooch_registry.txt
-# !! Repeat after every change, can also call 
+# !! Repeat after every change, can also call
 if __name__ == "__main__":
     from importlib.resources import files
     print(Path.cwd())
@@ -103,6 +104,9 @@ if __name__ == "__main__":
 def load_utf8_csv(path: Path) -> pd.DataFrame:
     """Load a CSV file with UTF-8 encoding."""
     df = pd.read_csv(path, encoding="utf-8", sep=";")
+    ### Convert Lon and Lat to numeric if they exist
+    if all(col in df.columns for col in ["Lon", "Lat"]):
+        u.pd.lon_lat_to_numeric(df=df, columns=["Lon", "Lat"])
     return df
 
 if __name__ == "__main__":
@@ -112,8 +116,13 @@ if __name__ == "__main__":
     print(cat[_key].loader)  # type: ignore
     df = cat.load(_key)
     display(df.head())
-    
+
     # %%
     _key = "KDB/KDB_ben-cist.csv"
+    print(cat[_key].path)  # < Print the path to the file
+    print(cat[_key].loader)  # type: ignore
+
+    # %%
+    _key = "KDB/KDB_complete_2.csv"
     print(cat[_key].path)  # < Print the path to the file
     print(cat[_key].loader)  # type: ignore
