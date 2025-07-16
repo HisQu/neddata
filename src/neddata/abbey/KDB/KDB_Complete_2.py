@@ -29,7 +29,7 @@ for row in defects.itertuples():
 
 
 """
-After raw csv import:
+After raw csv import (pd.read_csv):
                                     Lon        Lat            Standort  \
 937                            9.503042‎  51.313796     Kassel   
 1625                          10.227136°  50.671986           Sinnershausen   
@@ -38,7 +38,7 @@ After raw csv import:
 
 
 """
-Using the new loader:
+Using the new loader (load_utf8_csv):
             Lon        Lat       Standort  \
 937    9.503042  51.313796         Kassel   
 1625  10.227136  50.671986  Sinnershausen   
