@@ -44,6 +44,8 @@ requests==2.32.4
     #   pooch
 six==1.17.0
     # via python-dateutil
+tabulate==0.9.0
+    # via neddata (pyproject.toml)
 tzdata==2025.2
     # via pandas
 urllib3==2.5.0

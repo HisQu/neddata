@@ -27,6 +27,7 @@ dependencies = [
     "numpy",
     "openpyxl",      # < Opens excel files
     "pandas",
+    "tabulate",      # < Pretty print dataframes
     # --- Data I/O ----------------------
     "requests",      # < HTTP requests
     "pooch",
