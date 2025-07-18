@@ -515,7 +515,9 @@ class Catalog(Mapping[str, Resource]):
             cutoff=cutoff,  # 0.0 = very lenient, 1.0 = exact
         )
         if close_matches:
-            return f"\n Did you meanany of these:\n{'\n -'.join(close_matches)}?"
+            return (
+                f"\n Did you meanany of these:\n{'\n -'.join(close_matches)}?"
+            )
         else:
             return "(No close matches found.)"
 
