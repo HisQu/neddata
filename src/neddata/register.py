@@ -1,7 +1,7 @@
 import argparse
 import importlib.resources as ir
 
-from neddata._tools.assert_editable import assert_editable
+from neddata.assert_editable import assert_editable
 from neddata.datamodel import make_pooch_registry
 
 

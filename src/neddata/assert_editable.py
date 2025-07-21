@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import sys
 from importlib import metadata
 from pathlib import Path
 import site

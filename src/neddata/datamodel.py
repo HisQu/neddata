@@ -286,14 +286,14 @@ def _write_registry(
         rel = registry_fp.relative_to(Path.cwd())
     except ValueError:
         rel = registry_fp
+    if verbose:  # < Print the registry content
+        with open(registry_fp, "r") as f:
+            print(f.read())
     print(
         f"Pooch-registry written to {rel}"
         f"\nContains {n_entries} entries."
         f"\nYou can now upload {pkg_dir} to your object store and commit the new registry."
     )
-    if verbose:  # < Print the registry content
-        with open(registry_fp, "r") as f:
-            print(f.read())
 
 
 def _clean_registry(registry_fp: Path, ignore=IGNORE_PATTERNS) -> list[str]:
