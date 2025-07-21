@@ -76,7 +76,15 @@ MBF["input"] = MBF["header"] + " | " + MBF["sublemma_no_tags"]
 MBF
 
 # %%
-MBF.to_excel("Bench_Ben-Cist1.xlsx", index=False)
+# !! Save to xlsx (uncomment)
+# MBF.to_excel("Bench_Ben-Cist1.xlsx", index=False)
+
+
+# %%
+# !! Save to xlsx (uncomment)
+MBF.to_json("Bench_Ben-Cist1.json", index=False, indent=2, force_ascii=False)
+
+
 
 # %%
 
