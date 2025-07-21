@@ -4,7 +4,7 @@
 import pandas as pd
 from pathlib import Path
 
-# import neddata.utils as u
+# import neddata._utils as u
 from neddata.abbey.catalog import load_utf8_csv
 
 from IPython.display import display
@@ -25,7 +25,6 @@ for row in defects.itertuples():
     print(
         f"{row.id_gsn:>6} | {row.Lon:>20} | {row.Lat:>20} | {row.Standort:>30} | {row.monastery_name}"
     )
-    
 
 
 """

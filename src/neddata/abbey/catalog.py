@@ -7,7 +7,7 @@ import pandas as pd
 
 ### Local Imports
 from neddata import datamodel as dm
-import neddata.utils as u
+import neddata._utils as u
 
 
 # %%

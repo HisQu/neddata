@@ -12,7 +12,7 @@ from tabulate import tabulate
 
 from typing import Sequence, Mapping, Callable, Iterable, Optional
 
-# from neddata.utils.stdlib import infer_caller
+# from neddata._utils.stdlib import infer_caller
 
 
 # %%

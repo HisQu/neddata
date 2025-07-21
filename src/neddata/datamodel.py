@@ -26,7 +26,7 @@ from typing import (
     Union,
 )
 
-import neddata.utils as u
+import neddata._utils as u
 
 
 # =====================================================================

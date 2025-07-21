@@ -5,7 +5,7 @@ from IPython.display import display
 from pathlib import Path
 
 from neddata import abbey_catalog
-import neddata.utils as u
+import neddata._utils as u
 
 # %%
 regest_df: pd.DataFrame = abbey_catalog.load(
