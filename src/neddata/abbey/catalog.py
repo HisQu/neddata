@@ -33,7 +33,7 @@ if __name__ == "__main__":
     package = files(DATASET)
     package
     # %%
-    dm.make_pooch_registry(dir=package)
+    dm.make_pooch_registry(dataset=package)
     # %%
 
 

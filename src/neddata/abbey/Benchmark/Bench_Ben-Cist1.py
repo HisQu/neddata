@@ -72,19 +72,21 @@ MBF = MB[["header", "sublemma_no_tags", "RG_ID_all", "ID"]]
 MBF
 
 # %%
-MBF["input"] = MBF["header"] + " | " + MBF["sublemma_no_tags"]
+MBF["input"] = MBF["header"] + " || " + MBF["sublemma_no_tags"]
 MBF
 
 # %%
-# !! Save to xlsx (uncomment)
-# MBF.to_excel("Bench_Ben-Cist1.xlsx", index=False)
-
+# !! Save to xlsx
+MBF.to_excel("Bench_Ben-Cist1.xlsx", index=False)
 
 # %%
-# !! Save to xlsx (uncomment)
+# !! Save to JSON
 MBF.to_json("Bench_Ben-Cist1.json", index=False, indent=2, force_ascii=False)
 
-
+# %%
+# !! Update Pooch registry:
+from neddata.datamodel import make_pooch_registry
+make_pooch_registry("neddata.abbey")
 
 # %%
 

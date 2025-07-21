@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from importlib.resources import files
+from importlib.resources import files, as_file
 from importlib.resources.abc import Traversable
 from pathlib import Path
 import fnmatch
@@ -23,6 +23,7 @@ from typing import (
     Iterator,
     Mapping,
     Sequence,
+    Union,
 )
 
 import neddata.utils as u
@@ -73,6 +74,29 @@ example tree structure:
 ```
 """
 ### ./src/<my_project>/<dataset>
+
+
+FILE_PATTERNS = (
+    "*.tsv",
+    "*.csv",
+    "*.xlsx",
+    "*.json",
+    "*.txt",
+    "*.npy",
+    "*.pickle",
+)
+IGNORE_PATTERNS = (
+    ".git",
+    "*__pycache__*",
+    ".DS_Store",
+    "Thumbs.db",
+    "~$*",
+    ".old",
+    "*.IGNORE*",
+    "*.py",
+    "*.pyc",
+    "pooch_registry.txt", # < The registry itself
+)
 
 
 # =====================================================================
@@ -216,30 +240,68 @@ class DataDir(Resource):
                 self.pooch.fetch(fname)
 
 
+# %%
 # =====================================================================
 # === Pooch Registry
 # =====================================================================
 
 
-def make_pooch_registry(dir: Path | Traversable) -> None:
+def make_pooch_registry(
+    dataset: str | Path | Traversable, verbose: bool = True
+) -> None:
+    """
+    Generate (or overwrite) *pooch_registry.txt* for *dataset*.
+    :param dataset:
+        · Dotted package name  (e.g. ``'neddata.abbey'``) **or**
+        · Directory ``Path``/``Traversable`` pointing at the raw-data folder.
+    """
+    ### Resolve real on-disk path to package directory & register
+    if isinstance(dataset, str):
+        traversable: Traversable = files(dataset)
+    else:
+        traversable = cast(Traversable, dataset)
+    with as_file(traversable) as tmp_path:
+        pkg_dir: Path = tmp_path
+        _write_registry(pkg_dir, verbose=verbose)
 
-    raw_dir = Path(str(dir)).expanduser()
-    manifest = raw_dir / "pooch_registry.txt"
 
-    if not manifest.is_file():  # < Create empty .txt
-        manifest.touch()
-
-    pooch.make_registry(raw_dir, manifest)
-
+def _write_registry(pkg_dir: Path, verbose: bool = True, cleanup: bool = True) -> None:
+    ### Register
+    registry_fp = pkg_dir / "pooch_registry.txt"
+    pooch.make_registry(pkg_dir, registry_fp)  # < recursive=True by default
+    ### Remove ignored entries
+    if cleanup:
+        _clean_registry(registry_fp, ignore=IGNORE_PATTERNS)
+    ### Print summary
+    with registry_fp.open() as fh:
+        n_entries = sum(1 for _ in fh)
+    # > Try to make it relative to CWD, if possible
+    try:
+        rel = registry_fp.relative_to(Path.cwd())
+    except ValueError:
+        rel = registry_fp
     print(
         textwrap.dedent(
-            f"""
-    Manifest written to {manifest.relative_to(Path.cwd())}
-    Contains {sum(1 for _ in manifest.open())} entries.
-    You can now upload {raw_dir} to your object store and commit the manifest.
-    """
-        )
+            f""" \
+            Manifest written to {rel} \nContains {n_entries} entries.
+            You can now upload {pkg_dir} to your object store and commit the new registry.
+            """
+        ).strip()
     )
+    if verbose: # < Print the registry content
+        with open(registry_fp, "r") as f:
+            print(f.read())
+
+
+def _clean_registry(registry_fp: Path, ignore=IGNORE_PATTERNS):
+    keep = []
+    for line in registry_fp.read_text().splitlines():
+        fname, *_ = line.split()
+        if any(fnmatch.fnmatch(fname, pat) for pat in ignore):
+            continue  # < Drop unwanted entry
+        keep.append(line)
+        print(f"Keeping: {fname}")
+    registry_fp.write_text("\n".join(keep) + "\n")
 
 
 def make_pooch(package: str, base_url: str) -> pooch.Pooch:
@@ -288,17 +350,6 @@ def _match_any_globs(name: str, patterns: Iterable[str]) -> bool:
 class Catalog(Mapping[str, Resource]):
     """Auto-discovers files & 'directory datasets' beneath *package_root*."""
 
-    FILE_PATTERNS = ("*.csv", "*.xlsx", "*.json", "*.txt", "*.npy", "*.pickle")
-    IGNORE_PATTERNS = (
-        ".git",
-        "__pycache__",
-        ".DS_Store",
-        "Thumbs.db",
-        "~$*",
-        ".old",
-        "*.IGNORE*",
-    )
-
     def __init__(
         self,
         package: str,
@@ -334,7 +385,7 @@ class Catalog(Mapping[str, Resource]):
             elif self._is_inside_datadir(p):
                 continue  # > Skip everything nested inside a DataDir
             ### DataFile
-            elif _match_any_globs(p.name, self.FILE_PATTERNS):
+            elif _match_any_globs(p.name, FILE_PATTERNS):
                 loader = self._get_customloader(
                     key
                 ) or u.fileio.get_default_loader(p)
@@ -350,7 +401,7 @@ class Catalog(Mapping[str, Resource]):
 
     def _is_ignored(self, path: Path) -> bool:
         return any(
-            _match_any_globs(part, self.IGNORE_PATTERNS) for part in path.parts
+            _match_any_globs(part, IGNORE_PATTERNS) for part in path.parts
         )
 
     def _is_datadir(self, path: Path) -> bool:
