@@ -95,7 +95,7 @@ IGNORE_PATTERNS = (
     "*.IGNORE*",
     "*.py",
     "*.pyc",
-    "pooch_registry.txt", # < The registry itself
+    "pooch_registry.txt",  # < The registry itself
 )
 
 
@@ -265,13 +265,19 @@ def make_pooch_registry(
         _write_registry(pkg_dir, verbose=verbose)
 
 
-def _write_registry(pkg_dir: Path, verbose: bool = True, cleanup: bool = True) -> None:
+def _write_registry(
+    pkg_dir: Path, verbose: bool = True, cleanup: bool = True
+) -> None:
     ### Register
     registry_fp = pkg_dir / "pooch_registry.txt"
     pooch.make_registry(pkg_dir, registry_fp)  # < recursive=True by default
     ### Remove ignored entries
     if cleanup:
-        _clean_registry(registry_fp, ignore=IGNORE_PATTERNS)
+        removed = _clean_registry(registry_fp, ignore=IGNORE_PATTERNS)
+        if verbose:
+            print(
+                f"Removed {len(removed)} entries from the registry: {', '.join(removed)}"
+            )
     ### Print summary
     with registry_fp.open() as fh:
         n_entries = sum(1 for _ in fh)
@@ -281,27 +287,26 @@ def _write_registry(pkg_dir: Path, verbose: bool = True, cleanup: bool = True) -
     except ValueError:
         rel = registry_fp
     print(
-        textwrap.dedent(
-            f""" \
-            Manifest written to {rel} \nContains {n_entries} entries.
-            You can now upload {pkg_dir} to your object store and commit the new registry.
-            """
-        ).strip()
+        f"Pooch-registry written to {rel}"
+        f"\nContains {n_entries} entries."
+        f"\nYou can now upload {pkg_dir} to your object store and commit the new registry."
     )
-    if verbose: # < Print the registry content
+    if verbose:  # < Print the registry content
         with open(registry_fp, "r") as f:
             print(f.read())
 
 
-def _clean_registry(registry_fp: Path, ignore=IGNORE_PATTERNS):
+def _clean_registry(registry_fp: Path, ignore=IGNORE_PATTERNS) -> list[str]:
     keep = []
+    removed = []
     for line in registry_fp.read_text().splitlines():
         fname, *_ = line.split()
         if any(fnmatch.fnmatch(fname, pat) for pat in ignore):
+            removed.append(fname)
             continue  # < Drop unwanted entry
         keep.append(line)
-        print(f"Keeping: {fname}")
     registry_fp.write_text("\n".join(keep) + "\n")
+    return removed
 
 
 def make_pooch(package: str, base_url: str) -> pooch.Pooch:

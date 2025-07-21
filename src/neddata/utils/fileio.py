@@ -7,6 +7,11 @@ import pandas as pd
 from typing import Callable, Any, Optional
 
 
+# =====================================================================
+# === Default Loaders
+# =====================================================================
+
+
 def defaultload_json(file_path: Path) -> dict:
     """Read a JSON file and return its contents as a dictionary."""
     with open(file_path, "r") as f:
@@ -47,3 +52,19 @@ def get_default_loader(file_path: Path) -> Callable[[Path], Any] | None:
     """Return the default loader function for a given file type."""
     ext = file_path.suffix[1:]
     return DEFAULT_LOADERS.get(ext)
+
+
+# =====================================================================
+# === Save
+# =====================================================================
+
+
+def save_df_as_json_records(df: pd.DataFrame, fp: Path | str) -> None:
+    """Save a DataFrame as a JSON file with records format."""
+    df.to_json(
+        Path(fp).with_suffix(".json"),
+        index=False,
+        orient="records",
+        indent=2,
+        force_ascii=False,
+    )

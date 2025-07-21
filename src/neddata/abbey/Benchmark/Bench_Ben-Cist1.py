@@ -26,7 +26,6 @@ df = (
 df
 
 
-
 # %%
 all_r = pd.read_excel("../../RG/sublemma.xlsx")
 all_r
@@ -46,7 +45,7 @@ M = df.merge(
     how="inner",
 )
 M
-#%%
+# %%
 ### COunt the character lengths of the sublemma_no_tags column
 M["sublemma_no_tags_len"] = M["sublemma_no_tags"].str.len()
 M
@@ -81,11 +80,17 @@ MBF.to_excel("Bench_Ben-Cist1.xlsx", index=False)
 
 # %%
 # !! Save to JSON
-MBF.to_json("Bench_Ben-Cist1.json", index=False, indent=2, force_ascii=False)
+from neddata.utils.fileio import save_df_as_json_records
+
+save_df_as_json_records(
+    df=MBF,
+    fp="Bench_Ben-Cist1.json",
+)
 
 # %%
 # !! Update Pooch registry:
 from neddata.datamodel import make_pooch_registry
+
 make_pooch_registry("neddata.abbey")
 
 # %%
