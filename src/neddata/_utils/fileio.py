@@ -12,46 +12,66 @@ from typing import Callable, Any, Optional
 # =====================================================================
 
 
-def defaultload_json(file_path: Path) -> dict:
+def defaultload_json(filep: Path) -> dict:
     """Read a JSON file and return its contents as a dictionary."""
-    with open(file_path, "r") as f:
+    with open(filep, "r") as f:
         return json.load(f)
 
 
-def defaultload_text(file_path: Path) -> str:
+def defaultload_text(filep: Path) -> str:
     """Read a text file and return its contents as a string."""
-    with open(file_path, "r") as f:
+    with open(filep, "r") as f:
         return f.read()
 
 
-def defaultload_csv(file_path: Path) -> pd.DataFrame:
+def defaultload_csv(filep: Path) -> pd.DataFrame:
     """Read a CSV file and return its contents as a pandas DataFrame."""
-    return pd.read_csv(file_path)
+    return pd.read_csv(filep)
+
+def defaultload_tsv(filep: Path) -> pd.DataFrame:
+    """Read a TSV file and return its contents as a pandas DataFrame."""
+    return pd.read_csv(filep, sep="\t")
 
 
-def defaultload_excel(file_path: Path) -> pd.DataFrame:
+def defaultload_excel(filep: Path) -> pd.DataFrame:
     """Read an Excel file and return its contents as a pandas DataFrame."""
-    return pd.read_excel(file_path)
+    return pd.read_excel(filep)
 
 
-def defaultload_npy(file_path: Path) -> np.ndarray:
+def defaultload_npy(filep: Path) -> np.ndarray:
     """Read a NumPy file and return its contents as a NumPy array."""
-    return np.load(file_path)
+    return np.load(filep)
 
 
 DEFAULT_LOADERS: dict[str, Callable[[Path], Any]] = {
     "json": defaultload_json,
     "txt": defaultload_text,
     "csv": defaultload_csv,
+    "tsv": defaultload_tsv,
     "xlsx": defaultload_excel,
     "npy": defaultload_npy,
 }
 
 
-def get_default_loader(file_path: Path) -> Callable[[Path], Any] | None:
+def get_default_loader(filep: Path) -> Callable[[Path], Any] | None:
     """Return the default loader function for a given file type."""
-    ext = file_path.suffix[1:]
+    ext = filep.suffix[1:]
     return DEFAULT_LOADERS.get(ext)
+
+
+# =====================================================================
+# === Special Loaders
+# =====================================================================
+
+def load_json_records(filep: Path | str) -> pd.DataFrame:
+    """Load a DataFrame from a JSON records file."""
+    df = pd.read_json(
+        Path(filep),
+        orient="records",
+        lines=False,
+    )
+    return df
+
 
 
 # =====================================================================
@@ -59,10 +79,10 @@ def get_default_loader(file_path: Path) -> Callable[[Path], Any] | None:
 # =====================================================================
 
 
-def save_df_as_json_records(df: pd.DataFrame, fp: Path | str) -> None:
+def save_json_records(df: pd.DataFrame, filep: Path | str) -> None:
     """Save a DataFrame as a JSON file with records format."""
     df.to_json(
-        Path(fp).with_suffix(".json"),
+        Path(filep).with_suffix(".json"),
         index=False,
         orient="records",
         indent=2,

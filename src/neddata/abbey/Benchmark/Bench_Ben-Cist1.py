@@ -80,12 +80,9 @@ MBF.to_excel("Bench_Ben-Cist1.xlsx", index=False)
 
 # %%
 # !! Save to JSON
-from neddata._utils.fileio import save_df_as_json_records
+from neddata._utils.fileio import save_json_records
 
-save_df_as_json_records(
-    df=MBF,
-    fp="Bench_Ben-Cist1.json",
-)
+save_json_records(df=MBF, filep="Bench_Ben-Cist1.json")
 
 # %%
 # !! Update Pooch registry:
