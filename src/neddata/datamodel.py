@@ -317,7 +317,12 @@ def make_pooch(package: str, base_url: str) -> pooch.Pooch:
         registry=None,  # < Loaded after creation
         retry_if_failed=2,
     )
-    poochy.load_registry(files(package) / "pooch_registry.txt")
+    if (Path(files(package)) / "pooch_registry.txt").exists():
+        # > Load the registry from the package
+        poochy.load_registry(files(package) / "pooch_registry.txt")
+    else:
+        # > Load the registry from the package root
+        make_pooch_registry(package, verbose=False)
     return poochy
 
 
