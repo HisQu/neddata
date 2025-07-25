@@ -11,4 +11,3 @@ from neddata.datamodel import (
 )
 
 
-from neddata.abbey.catalog import abbey_catalog
