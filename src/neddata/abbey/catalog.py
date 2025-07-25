@@ -47,7 +47,7 @@ POOCHY = dm.make_pooch(DATASET, BASE_URL)
 
 
 # > <database>.<dataset> is located at ./src/<my_project>/<dataset>
-cat = dm.Catalog(
+abbey_catalog = dm.Catalog(
     DATASET,
     dir_patterns=DATADIR_PATTERNS,
     pooch=POOCHY,
@@ -56,7 +56,7 @@ cat = dm.Catalog(
 if __name__ == "__main__":
     from pprint import pprint
 
-    print(cat)  # > Print the catalogue object
+    print(abbey_catalog)  # > Print the catalogue object
 
 
 # %%
@@ -66,7 +66,7 @@ if __name__ == "__main__":
 # => Use globs/wildcards to register a function to multiple files at once!
 
 
-@cat.set_loader("Regests/2_ben-Cist Identifizierungen.csv")
+@abbey_catalog.set_loader("Regests/2_ben-Cist Identifizierungen.csv")
 def load_ben_cist_data(path: Path) -> pd.DataFrame:
     """Import CSV file that ignores the separator in the last column."""
     ### Read the whole file as plain text, one Python string per line
@@ -88,19 +88,19 @@ if __name__ == "__main__":
 
     #  %%
     ### Load conventionally
-    p = cat[_key].path
+    p = abbey_catalog[_key].path
     print(p)
     df = load_ben_cist_data(p)
     display(df)
     # %%
     ### Load from the catalogue
-    print(cat[_key].path)
-    print(cat[_key].loader)  # type: ignore
-    df = cat.load(_key)
+    print(abbey_catalog[_key].path)
+    print(abbey_catalog[_key].loader)  # type: ignore
+    df = abbey_catalog.load(_key)
     display(df)
 
 # %%
-@cat.set_loader("KDB/KDB*.csv")
+@abbey_catalog.set_loader("KDB/KDB*.csv")
 def load_utf8_csv(path: Path) -> pd.DataFrame:
     """Load a CSV file with UTF-8 encoding."""
     df = pd.read_csv(path, encoding="utf-8", sep=";")
@@ -112,17 +112,28 @@ def load_utf8_csv(path: Path) -> pd.DataFrame:
 if __name__ == "__main__":
     _key = "KDB/KDB_complete.csv"
     # _key = 'kdb/kdb_complete.csv'
-    print(cat[_key].path)  # < Print the path to the file
-    print(cat[_key].loader)  # type: ignore
-    df = cat.load(_key)
+    print(abbey_catalog[_key].path)  # < Print the path to the file
+    print(abbey_catalog[_key].loader)  # type: ignore
+    df = abbey_catalog.load(_key)
     display(df.head())
 
     # %%
     _key = "KDB/KDB_ben-cist.csv"
-    print(cat[_key].path)  # < Print the path to the file
-    print(cat[_key].loader)  # type: ignore
+    print(abbey_catalog[_key].path)  # < Print the path to the file
+    print(abbey_catalog[_key].loader)  # type: ignore
 
     # %%
     _key = "KDB/KDB_complete_2.csv"
-    print(cat[_key].path)  # < Print the path to the file
-    print(cat[_key].loader)  # type: ignore
+    print(abbey_catalog[_key].path)  # < Print the path to the file
+    print(abbey_catalog[_key].loader)  # type: ignore
+
+
+# %%
+@abbey_catalog.set_loader("1_text_header_sublemma_Identifizierungen.csv")
+def load_utf8_csv(path: Path) -> pd.DataFrame:
+    """Load a CSV file with UTF-8 encoding."""
+    df = pd.read_csv(path, encoding="utf-8", sep=";")
+    ### Convert Lon and Lat to numeric if they exist
+    if all(col in df.columns for col in ["Lon", "Lat"]):
+        u.pd.lon_lat_to_numeric(df=df, columns=["Lon", "Lat"])
+    return df

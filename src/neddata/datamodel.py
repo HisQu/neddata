@@ -594,16 +594,16 @@ if __name__ == "__main__":
     import pandas as pd
 
     ### Import test catalogue
-    from neddata.abbey.catalog import cat
+    from neddata.abbey.catalog import abbey_catalog
 
     # %% Repr
-    cat
+    abbey_catalog
     # %%
-    cat.keys()
+    abbey_catalog.keys()
     # %%
     # === key typos ===
     # !! Typo lower case
-    cat["Regests/2_ben-Cist_Identifizierungen.csv"]
+    abbey_catalog["Regests/2_ben-Cist_Identifizierungen.csv"]
 
     # %%
     # cat["Regästs/2_ben-Cist_Identifizierungen.csv"] # !! raises
@@ -613,49 +613,49 @@ if __name__ == "__main__":
     # === Search & glob
     # =========================
     # %%
-    cat.glob("*kdb_ben cist*")  # < Search for files in the catalogue
+    abbey_catalog.glob("*kdb_ben cist*")  # < Search for files in the catalogue
     # %%
-    cat.search(
+    abbey_catalog.search(
         "kdb_ben-cist", cutoff=75
     )  # < Search for files wit fuzzy matching
     # %%
-    cat.search("RAGI")
+    abbey_catalog.search("RAGI")
     # %%
     # =========================
     # === pooch
     # =========================
-    dir(cat.pooch)  # < Show all attributes of the pooch object
+    dir(abbey_catalog.pooch)  # < Show all attributes of the pooch object
     # %%
-    cat.pooch.registry  # < List all files in the dataset
+    abbey_catalog.pooch.registry  # < List all files in the dataset
     # %%
-    cat.pooch.get_url("KDB/KDB_Ben-Cist.csv")
+    abbey_catalog.pooch.get_url("KDB/KDB_Ben-Cist.csv")
     # %%
-    cat.pooch.is_available("KDB/KDB_Ben-Cist.csv")
+    abbey_catalog.pooch.is_available("KDB/KDB_Ben-Cist.csv")
     # %%
-    cat.pooch.fetch("KDB/KDB_Ben-Cist.csv")
+    abbey_catalog.pooch.fetch("KDB/KDB_Ben-Cist.csv")
 
     # %%
-    print(type(cat.pooch.registry))
-    cat.pooch.registry
+    print(type(abbey_catalog.pooch.registry))
+    abbey_catalog.pooch.registry
 
     # %%
     # =========================
     # === load DataFiles
     # =========================
-    df: pd.DataFrame = cat.load("Regests/2_ben-Cist Identifizierungen.csv")
+    df: pd.DataFrame = abbey_catalog.load("Regests/2_ben-Cist Identifizierungen.csv")
     display(df.head())  # < Display the first few rows of the DataFrame
 
     # %%
     # =========================
     # === load DataDirs
     # =========================
-    cat
+    abbey_catalog
     # %%
     _key = "kdb/kdb_complete_ragi/"
-    print(cat[_key].name)
-    print(cat[_key].path)
+    print(abbey_catalog[_key].name)
+    print(abbey_catalog[_key].path)
     # %%
-    r = cat.load(_key)
+    r = abbey_catalog.load(_key)
     print(r)
 
     # %%
