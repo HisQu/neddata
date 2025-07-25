@@ -1,0 +1,3 @@
+[submodule "src/neddata/RG_data"]
+	path = src/neddata/RG_data
+	url = https://github.com/HisQu/RG_data
