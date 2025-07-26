@@ -90,7 +90,7 @@ IGNORE_PATTERNS = (
     "*__pycache__*",
     ".DS_Store",
     "Thumbs.db",
-    "~$*",
+    "~$*", # < Excel temp files (not working on MacOS)
     ".old",
     "*.IGNORE*",
     "*.py",
@@ -276,7 +276,7 @@ def _write_registry(
         removed = _clean_registry(registry_fp, ignore=IGNORE_PATTERNS)
         if verbose:
             print(
-                f"Removed {len(removed)} entries from the registry: {', '.join(removed)}"
+                f"Ignored {len(removed)} entries from the registry: {', '.join(removed)}"
             )
     ### Print summary
     with registry_fp.open() as fh:
