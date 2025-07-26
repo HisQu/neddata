@@ -344,7 +344,7 @@ def implode(
     ### Assign the aggregation function to each column
     if agg_dict is None:
         agg_dict = {
-            col: lambda x: ", ".join(sorted(set(x))) for col in columns_to_agg
+            col: lambda s: ", ".join(map(str, sorted(set(s)))) for col in columns_to_agg
         }
     ### Implode
     return df.groupby(groupby_col, as_index=as_index).agg(agg_dict)
@@ -352,7 +352,7 @@ def implode(
 
 if __name__ == "__main__":
     ### Load a sample DataFrame
-    from neddata import abbey_catalog
+    from neddata.abbey.catalog import abbey_catalog
 
     df: pd.DataFrame = abbey_catalog.load(
         "regests/2_ben_cist_identifizierungen.csv"
