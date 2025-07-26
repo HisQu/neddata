@@ -4,7 +4,7 @@ import pandas as pd
 from IPython.display import display
 from pathlib import Path
 
-from neddata import abbey_catalog
+from neddata.abbey.catalog import abbey_catalog
 import neddata._utils as u
 
 # %%
