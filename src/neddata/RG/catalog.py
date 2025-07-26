@@ -65,7 +65,7 @@ if __name__ == "__main__":
 # =====================================================================
 # => Use globs/wildcards to register a function to multiple files at once!
 
-@rg_catalog.set_loader("./rg_records*.json")
+@rg_catalog.set_loader("Regests/records*.json")
 def load_rg_records_json(path: Path) -> pd.DataFrame:
     """
     Load RG records from a JSON file into a DataFrame.
@@ -80,7 +80,7 @@ def load_rg_records_json(path: Path) -> pd.DataFrame:
 if __name__ == "__main__":
     from IPython.display import display
 
-    _key = "./rg_records1.json"
+    _key = "regests/records1.json"
 
     #  %%
     ### Load conventionally

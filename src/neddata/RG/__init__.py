@@ -1,1 +1,1 @@
-from neddata.RG.catalog import rg_catalog
+# from neddata.RG.catalog import rg_catalog
