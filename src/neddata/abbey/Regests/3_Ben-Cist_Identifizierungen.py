@@ -43,11 +43,17 @@ print(abbey_catalog)
 # DF_IDENT
 
 # %%
-
 DF_IDENT: pd.DataFrame = abbey_catalog.load(
     "regests/2_ben-cist_identifizierungen.csv"
 )
 DF_IDENT
+
+# %%
+weird = u.fileio.find_weird_tokens(DF_IDENT, columns=["complete_no_tags"])
+weird
+
+# %%
+
 
 # %%
 DF_IDENT["header_text"] = (
@@ -64,6 +70,10 @@ DF_IDENT
 # =====================================================================
 DF_RG_RAW: pd.DataFrame = rg_catalog.load("regests/records1.json")
 DF_RG_RAW.head(5)
+
+# %%
+weird = u.fileio.find_weird_tokens(DF_RG_RAW, columns=["header_text", "subentry_text"])
+weird
 
 # %%
 
@@ -188,6 +198,11 @@ DF_IDENT_M["complete_no_tags"] = (
 )
 len_counts = DF_IDENT_M["complete_no_tags"].str.len().value_counts()
 print(len_counts)
+
+
+# %%
+
+# break
 
 # %%
 # !! Save

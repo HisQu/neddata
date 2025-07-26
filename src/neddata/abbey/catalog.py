@@ -128,6 +128,10 @@ if __name__ == "__main__":
     print(abbey_catalog[_key].loader)  # type: ignore
 
 
+@abbey_catalog.set_loader("*.json")
+def load_records_json(path: Path) -> pd.DataFrame:
+    return u.fileio.load_json_records(path)  # type: ignore
+
 # %%
 # @abbey_catalog.set_loader("Regests/1_text_header_sublemma_Identifizierungen.csv")
 # def load_utf8_csv(path: Path) -> pd.DataFrame:

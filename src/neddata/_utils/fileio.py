@@ -28,6 +28,7 @@ def defaultload_csv(filep: Path) -> pd.DataFrame:
     """Read a CSV file and return its contents as a pandas DataFrame."""
     return pd.read_csv(filep)
 
+
 def defaultload_tsv(filep: Path) -> pd.DataFrame:
     """Read a TSV file and return its contents as a pandas DataFrame."""
     return pd.read_csv(filep, sep="\t")
@@ -63,15 +64,16 @@ def get_default_loader(filep: Path) -> Callable[[Path], Any] | None:
 # === Special Loaders
 # =====================================================================
 
+
 def load_json_records(filep: Path | str) -> pd.DataFrame:
     """Load a DataFrame from a JSON records file."""
     df = pd.read_json(
         Path(filep),
         orient="records",
         lines=False,
+        encoding="utf-8",
     )
     return df
-
 
 
 # =====================================================================
@@ -88,3 +90,69 @@ def save_json_records(df: pd.DataFrame, filep: Path | str) -> None:
         indent=2,
         force_ascii=False,
     )
+
+
+# =====================================================================
+# === Checkers
+# =====================================================================
+WEIRD_CHARS = ["&w&w", "&w&", "&w", "&y"]
+
+
+import re
+import pandas as pd
+from typing import Iterable, Sequence, Optional
+
+WEIRD_CHARS: Sequence[str] = ["&w&w", "&w&", "&w", "&y"]
+
+
+def find_weird_tokens(
+    df: pd.DataFrame,
+    weird_tokens: Optional[Iterable[str]] = None,
+    columns: Optional[Sequence[str]] = None,
+    case: bool = True,
+) -> pd.DataFrame | None:
+    """
+    Return a DataFrame listing every cell that contains one of *weird_tokens*.
+
+    Columns of the result:
+    ┌ row  – original row label
+    ├ column – column name
+    ├ weird_token – the first matching token
+    └ value – the full original cell value
+    """
+    tokens = list(weird_tokens or WEIRD_CHARS)
+    # Build a single alternation pattern, escaping any regex meta-chars
+    pattern = re.compile(
+        "|".join(map(re.escape, tokens)), flags=0 if case else re.I
+    )
+
+    # If not provided, scan every column that has string-compatible dtype
+    if columns is None:
+        columns = df.select_dtypes(include=["object", "string"]).columns
+
+    # 1️⃣ Boolean mask of matches (DataFrame shape identical to *columns*)
+    mask = df[columns].apply(
+        lambda s: s.astype("string").str.contains(pattern, na=False, regex=True)
+    )  
+    if not mask.any().any():  # short-circuit when nothing found
+        return None
+
+    # 2️⃣ Reshape to long format: each True becomes one row
+    hits = (
+        mask.stack()  # MultiIndex (row-label, column-name) → bool
+        .loc[lambda x: x]  # keep only True values
+        .reset_index()
+        .rename(columns={"level_0": "row", "level_1": "column"})
+    )  # stack is faster than nested Python loops
+    # 3️⃣ Capture which token triggered the hit (vectorised extract)
+    long_vals = df.reindex(columns=columns).stack()  # align with hits
+    hits["value"] = long_vals.loc[mask.stack()].values
+    hits["weird_token"] = hits["value"].str.extract(
+        f"({'|'.join(map(re.escape, tokens))})", expand=False
+    )  # str.extract returns the matching group
+    
+    # if not hits.empty:
+    #     print(f"Found {len(hits)} hits in {len(df)} rows and {len(columns)} columns.")
+    # else:
+    #     print("No weird tokens found in the DataFrame.")
+    return hits
