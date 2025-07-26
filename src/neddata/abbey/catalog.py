@@ -129,11 +129,11 @@ if __name__ == "__main__":
 
 
 # %%
-@abbey_catalog.set_loader("Regests/1_text_header_sublemma_Identifizierungen.csv")
-def load_utf8_csv(path: Path) -> pd.DataFrame:
-    """Load a CSV file with UTF-8 encoding."""
-    df = pd.read_csv(path, encoding="utf-8", sep=";")
-    ### Convert Lon and Lat to numeric if they exist
-    if all(col in df.columns for col in ["Lon", "Lat"]):
-        u.pd.lon_lat_to_numeric(df=df, columns=["Lon", "Lat"])
-    return df
+# @abbey_catalog.set_loader("Regests/1_text_header_sublemma_Identifizierungen.csv")
+# def load_utf8_csv(path: Path) -> pd.DataFrame:
+#     """Load a CSV file with UTF-8 encoding."""
+#     df = pd.read_csv(path, encoding="utf-8", sep=";")
+#     ### Convert Lon and Lat to numeric if they exist
+#     if all(col in df.columns for col in ["Lon", "Lat"]):
+#         u.pd.lon_lat_to_numeric(df=df, columns=["Lon", "Lat"])
+#     return df
