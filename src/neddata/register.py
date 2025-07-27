@@ -2,7 +2,7 @@ import argparse
 import importlib.resources as ir
 
 from neddata.assert_editable import assert_editable
-from neddata.datamodel import make_pooch_registry
+from neddata.datamodel import write_pooch_registry
 
 
 # ================================================================== #
@@ -37,4 +37,4 @@ def _run(args: argparse.Namespace) -> None:
     assert_editable("neddata")
 
     ### Register
-    make_pooch_registry(pkg_path)
+    write_pooch_registry(pkg_path)

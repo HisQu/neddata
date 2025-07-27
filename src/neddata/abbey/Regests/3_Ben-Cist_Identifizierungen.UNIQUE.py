@@ -55,4 +55,4 @@ u.fileio.save_json_records(
 
 # %%
 # !! Register the DataFrame in the catalog
-dm.make_pooch_registry("neddata.abbey")
+dm.write_pooch_registry("neddata.abbey")

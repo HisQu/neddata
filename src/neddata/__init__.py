@@ -2,12 +2,11 @@
 ### Flatten Access
 
 from neddata.datamodel import (
+    make_catalog,
     make_pooch,
-    make_pooch_registry,
+    write_pooch_registry,
     Resource,
     DataFile,
     DataDir,
     Catalog,
 )
-
-

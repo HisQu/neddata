@@ -5,40 +5,13 @@ from pathlib import Path
 
 import pandas as pd
 
-### Local Imports
+# --- Local Imports
 from neddata import datamodel as dm
 import neddata._utils as u
 
-
-# %%
-# => Configure the Dataset
-DATASET = "neddata.abbey"  # < Package name of the dataset
-DB_URL = "https://raw.githubusercontent.com/HisQu/neddata/refs/heads/main/src"
-BASE_URL = f"{DB_URL}/{DATASET.replace('.', '/')}"
-
-
-# > Patterns to define what directory is a DataDir and not a normal folder
-DATADIR_PATTERNS = [
-    "*RAGI*",  # < RAG Index
-]
-
-
-# %%
-# => Make / update the pooch_registry.txt
-# !! Repeat after every change, can also call
+# --- Imports for testing
 if __name__ == "__main__":
-    from importlib.resources import files
-    print(Path.cwd())
-    # %%
-    package = files(DATASET)
-    package
-    # %%
-    dm.make_pooch_registry(dataset=package)
-    # %%
-
-
-POOCHY = dm.make_pooch(DATASET, BASE_URL)
-
+    from IPython.display import display
 
 # %%
 # =====================================================================
@@ -46,16 +19,38 @@ POOCHY = dm.make_pooch(DATASET, BASE_URL)
 # =====================================================================
 
 
-# > <database>.<dataset> is located at ./src/<my_project>/<dataset>
-abbey_catalog = dm.Catalog(
-    DATASET,
-    dir_patterns=DATADIR_PATTERNS,
-    pooch=POOCHY,
+# ---------------------------------------------------------------------
+# --- Manual Configuration
+
+# => Configure the Dataset
+DATASET = "neddata.abbey"  # < <project>.<package> = <database>.<dataset>
+DB_URL = "https://raw.githubusercontent.com/HisQu/neddata/refs/heads/main/src"
+
+
+# > Glob-Patterns of directories that become a DataDir 
+# > Containing files will be downloaded as a whole (not catalogued as Datafiles)
+DATADIR_PATTERNS = [
+    "*RAGI*",  # < RAG Index
+]
+
+# %%
+# => Make / update the pooch_registry.txt
+# !! Repeat after every change
+if __name__ == "__main__":
+    dm.write_pooch_registry(dataset=DATASET)
+    # %%
+
+
+# %%
+# ---------------------------------------------------------------------
+# --- Make Catalogue
+abbey_catalog: dm.Catalog = dm.make_catalog(
+    dataset=DATASET,
+    base_url=DB_URL,
+    datadir_patterns=DATADIR_PATTERNS,
 )
 
 if __name__ == "__main__":
-    from pprint import pprint
-
     print(abbey_catalog)  # > Print the catalogue object
 
 
@@ -82,10 +77,7 @@ def load_ben_cist_data(path: Path) -> pd.DataFrame:
 
 
 if __name__ == "__main__":
-    from IPython.display import display
-
     _key = "Regests/2_Ben-cist_Identifizierungen.csv"
-
     #  %%
     ### Load conventionally
     p = abbey_catalog[_key].path
@@ -99,6 +91,7 @@ if __name__ == "__main__":
     df = abbey_catalog.load(_key)
     display(df)
 
+
 # %%
 @abbey_catalog.set_loader("KDB/KDB*.csv")
 def load_utf8_csv(path: Path) -> pd.DataFrame:
@@ -108,6 +101,7 @@ def load_utf8_csv(path: Path) -> pd.DataFrame:
     if all(col in df.columns for col in ["Lon", "Lat"]):
         u.pd.lon_lat_to_numeric(df=df, columns=["Lon", "Lat"])
     return df
+
 
 if __name__ == "__main__":
     _key = "KDB/KDB_complete.csv"
@@ -127,10 +121,11 @@ if __name__ == "__main__":
     print(abbey_catalog[_key].path)  # < Print the path to the file
     print(abbey_catalog[_key].loader)  # type: ignore
 
-
+# %%
 @abbey_catalog.set_loader("*.json")
 def load_records_json(path: Path) -> pd.DataFrame:
     return u.fileio.load_json_records(path)  # type: ignore
+
 
 # %%
 # @abbey_catalog.set_loader("Regests/1_text_header_sublemma_Identifizierungen.csv")

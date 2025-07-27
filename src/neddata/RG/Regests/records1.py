@@ -23,5 +23,4 @@ rgj.describe_rg(df)
 rgj.export_records_json(df, filep="records1.json")
 
 # %%
-dm.make_pooch_registry("neddata.RG", verbose=True)
-
+dm.write_pooch_registry("neddata.RG", verbose=True)

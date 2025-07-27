@@ -86,9 +86,9 @@ save_json_records(df=MBF, filep="Bench_Ben-Cist1.json")
 
 # %%
 # !! Update Pooch registry:
-from neddata.datamodel import make_pooch_registry
+from neddata.datamodel import write_pooch_registry
 
-make_pooch_registry("neddata.abbey")
+write_pooch_registry("neddata.abbey")
 
 # %%
 

@@ -213,6 +213,6 @@ u.fileio.save_json_records(
 
 # %%
 # !! Register
-dm.make_pooch_registry(dataset="neddata.abbey")
+dm.write_pooch_registry(dataset="neddata.abbey")
 
 # %%
