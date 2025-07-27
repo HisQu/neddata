@@ -131,7 +131,7 @@ def find_weird_tokens(
         columns = df.select_dtypes(include=["object", "string"]).columns
 
     # 1️⃣ Boolean mask of matches (DataFrame shape identical to *columns*)
-    mask = df[columns].apply(
+    mask: pd.DataFrame = df[columns].apply(
         lambda s: s.astype("string").str.contains(pattern, na=False, regex=True)
     )  
     if not mask.any().any():  # short-circuit when nothing found

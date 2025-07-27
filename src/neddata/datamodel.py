@@ -536,9 +536,9 @@ if __name__ == "__main__":
     # =========================
     abbey_catalog
     # %%
-    # _key = "kdb/kdb_complete_ragi/"
-    # print(abbey_catalog[_key].name)
-    # print(abbey_catalog[_key].path)
+    _key = "kdb/kdb_complete_ragi/"
+    print(abbey_catalog[_key].name)
+    print(abbey_catalog[_key].path)
     # %%
-    # r = abbey_catalog.load(_key)
-    # print(r)
+    r = abbey_catalog.load(_key)
+    print(r)
